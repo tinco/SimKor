@@ -1,75 +1,15 @@
-module RProxyBot
+require 'RProxyBot/RProxyBot/proxybot.rb'
+require 'util.rb'
 
-  class Coordinate
-    #Class for creating coordinate objects. An object contains an x and y value.
-  
-    attr_accessor :x
-    attr_accessor :y
-  
-    def initialize(x,y)
-      @x = x
-      @y = y
-
-    end
-
-    #rewriting of eql? and hash required in order to compare the coordinate objects
-    def eql?(arg)
-      self.hash == arg.hash
-    end
-    
-    def hash
-      "x#{@x}y#{@y}".hash
-    end
-    
-    def to_s
-      "#{@x},#{@y}"
-    end
-
-  end
-  
-  class IssuedOrder
-    #IssuedOrder contains information about buildorders that have
-    #been issued but have not been completed
-    
-    attr_accessor :workerId
-    attr_accessor :cost
-    attr_accessor :type
-
-    def initialize(workerId, cost, type)
-      @workerId = workerId
-      @cost = cost
-      @type = type
-
-    end
-   
-  end
-  
-  class BuildOrder
-    #contains the building to be build
-    #and the supply needed
-    attr_accessor :supply
-    attr_accessor :building
-    attr_accessor :cost
-    attr_accessor :u
-    attr_accessor :v
-    
-    def initialize(supply,building,cost,u,v)
-      @supply = supply
-      @building = building
-      @cost = cost
-      @u = u
-      @v = v
-    end
-    
-  end
-
-	class	BasicAI
-		include	Constants
+module AI
+	class	ZergAI
+    include RProxyBot
+		include	RProxyBOT::Constants
 		@@rc = []		
 	  
-	  def self.giveMineralSpots
 	  #this method provides an array of mineralspots that are 
 	  #within a 9 unit radius of the command center
+	  def self.giveMineralSpots
       ProxyBot.instance.units.minerals.select do |u|
         u.distance_to(ProxyBot.instance.player.command_centers.first)<9
       end
@@ -81,9 +21,9 @@ module RProxyBot
       end
     end
     
-    def self.getBuildingCoordinates(x,y,a,b)
       #returns array of tile-coordinates of specified building
       #building location (x,y), size a*b
+    def self.getBuildingCoordinates(x,y,a,b)
         puts"building #{a}x#{b} at location (#{x},#{y})"
         coords = Array.new
         (0..b-1).each do |j|
@@ -97,7 +37,6 @@ module RProxyBot
         end
       puts"*getBuildingCoordinates* returning array of building coordinates"
       coords
-      
     end
     
  
@@ -286,7 +225,7 @@ module RProxyBot
 		
 		def	self.start
 			Thread.new do
-				starcraft	=	ProxyBot.instance
+				starcraft	=	ProxyBot.instance.game
 				player = starcraft.player
 				workers	=	player.workers
 				center = player.command_centers.first
@@ -294,8 +233,6 @@ module RProxyBot
 				eggs = player.eggs
 				minerals = starcraft.units.minerals.sort do	|a,	b|
 					b.distance_to(center)	<=>	a.distance_to(center)
-	
-
 				end
 			
 			  workers.each do	|w|
@@ -453,7 +390,7 @@ module RProxyBot
       						pylon_x	=	((center.x)	+	6	)
       						puts "pylon_x	=	((center.x)	+	6	)"
       					end
-      					puts "ga bouwen	dan	KUT"
+      					puts "ga bouwen	dan	KUT" #<-- haha :P
       					workers.first.build(UnitTypes::Pylon,	pylon_x, center.y)
       					puts "ik ga	echt bouwen"
       				end
