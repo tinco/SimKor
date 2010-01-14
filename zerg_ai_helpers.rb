@@ -1,16 +1,18 @@
 module AI
   module ZergAIHelpers
+    include RProxyBot
+    include RProxyBot::Constants
     #this method provides an array of mineralspots that are 
     #within a 9 unit radius of the command center
     def initial_mineral_spots
       starcraft.units.minerals.select do |u|
-        u.distance_to(player.command_centers.first) < 9 * 32
+        u.distance_to(player.command_centers.first) < 9.build_tiles
       end
     end
 
     def initial_vespene_geysers
       starcraft.units.vespene_geysers.select do |u|
-        u.distance_to(player.command_centers.first) < 9 * 32
+        u.distance_to(player.command_centers.first) < 9.build_tiles
       end
     end
 
@@ -23,7 +25,7 @@ module AI
 
         (0..height-1).each do |i|
 
-          co = Coordinate.new(x+i,y+j)
+          co = Coordinate.new(x+i.build_tiles,y+j.build_tiles)
           coords.push(co)
         end
 
@@ -44,7 +46,7 @@ module AI
 
         (0..height-1).each do |i|
 
-          co = Coordinate.new(x+i,y+j)
+          co = Coordinate.new(x+i.build_tiles,y+j.build_tiles)
           coords.push(co)
         end
       end
@@ -70,12 +72,12 @@ module AI
       #providing a coordinate and another coordinate/rester, this method provides an array of coordinates
       #that fall within the coordinate and raster
 
-      ([y, resource_y].min..[y,(resource_y+width)].max).each do |j|
+      ([y, resource_y].min.in_build_tiles..[y,(resource_y+width.b_tiles)].max.in_build_tiles).each do |j|
 
-        ([x,resource_x].min..[x,(resource_x+height)].max).each do |i|
+        ([x,resource_x].min.in_build_tiles..[x,(resource_x+height.b_tiles)].max.in_build_tiles).each do |i|
 
           #create a coordinate with the x and y values, push on array
-          co = Coordinate.new(i,j)
+          co = Coordinate.new(i.build_tiles,j.build_tiles)
           coords.push(co)
         end        
 
@@ -94,13 +96,17 @@ module AI
       #array of coords of geyser (1 geyser at the moment!)
       vespenecoords = Array.new
       vespenecoords = building_coordinates(vespenespots.last.x,vespenespots.last.y,4,2)
+      puts "Vespenecoords.length #{vespenecoords.length}"
 
       #create an array that will contrain all restricted coordinates
       rescoords = Array.new
       #for every mineralspot, and array of restricted coordinates retrieved
       done = false
       while (not done)
-        rescoords.concat(make_coord_array(player.command_centers.first.x, player.command_centers.first.y,mineralspots.last.x,mineralspots.last.y,2,1))
+        rescoords.concat(make_coord_array(player.command_centers.first.x, 
+                                          player.command_centers.first.y,
+                                          mineralspots.last.x,
+                                          mineralspots.last.y, 2,1))
         mineralspots.pop
         done = mineralspots.last.nil?
       end
@@ -108,7 +114,10 @@ module AI
       done = false
 
       while (not done)
-        rescoords.concat(make_coord_array(player.command_centers.first.x, player.command_centers.first.y,vespenecoords.last.x,vespenecoords.last.y,4,2))
+        rescoords.concat(make_coord_array(player.command_centers.first.x,
+                                          player.command_centers.first.y,
+                                          vespenecoords.last.x,
+                                          vespenecoords.last.y, 4, 2))
         vespenecoords.pop
         done = vespenecoords.last.nil?
       end
@@ -122,39 +131,39 @@ module AI
       #distance spiral<->tileset is n
 
       #calculate the starting position for the spiral
-      xLoc = x-distance
-      yLoc = y-distance
+      xLoc = x - distance.build_tiles
+      yLoc = y - distance.build_tiles
 
       #The size of the source building determines the size of the spiral
-      rasterSizeX = (2*distance)+height-1
-      rasterSizeY = (2*distance)+width-1
+      rasterSizeX = (2*distance.b_tiles)+height.b_tiles-1
+      rasterSizeY = (2*distance.b_tiles)+width.b_tiles-1
       kanBouwen = true
       tiles = Array.new
 
       #Top row of tiles        
-      (0..(rasterSizeX)).each do |i|
-        xCoordinaat = xLoc + i
+      (0..(rasterSizeX.in_build_tiles)).each do |i|
+        xCoordinaat = xLoc + i.build_tiles
         co = Coordinate.new(xCoordinaat,yLoc)
         tiles.push(co)
       end
 
       #Right row of tiles (excluding top right)          
-      (1..(rasterSizeY)).each do |i|
-        yCoordinaat = yLoc + i
+      (1..(rasterSizeY.in_build_tiles)).each do |i|
+        yCoordinaat = yLoc + i.build_tiles
         co = Coordinate.new(xLoc+rasterSizeX,yCoordinaat)
         tiles.push(co)
       end
 
       #Bottom row of tiles (excluding bottom right)  
-      (0..(rasterSizeX-1)).each do |i|
-        xCoordinaat = xLoc + i
+      (0..(rasterSizeX-1).in_build_tiles).each do |i|
+        xCoordinaat = xLoc + i.build_tiles
         co = Coordinate.new(xCoordinaat,yLoc+rasterSizeY)
         tiles.push(co)
       end
 
       #Left row of tiles (excluding bottom left and top left)
-      (1..(rasterSizeY-1)).each do |i|
-        yCoordinaat = yLoc + i
+      (1..(rasterSizeY-1).in_build_tiles).each do |i|
+        yCoordinaat = yLoc + i.build_tiles
         co = Coordinate.new(xLoc,yCoordinaat)
         tiles.push(co)
       end
@@ -163,7 +172,7 @@ module AI
       tiles
     end
 
-    def self.buildable_coords(x,y,height,width,target_height,target_width,rc) #TODO wat is rc?
+    def buildable_coords(x,y,height,width,target_height,target_width,rc)
       #returns all coordinates where the structure with size u*v
       #can be built around source building a*b at location (x,y)
       #bc are buildable coordinates
@@ -194,7 +203,7 @@ module AI
 
     end
 
-    def build_structure(x, y, height, width, target_height, target_width, rc) #TODO wat is een rc?
+    def build_structure(x, y, height, width, target_height, target_width, rc)
       #(x,y), source bld coords, size a*b
       #target building size u*v
       #rc are restricted coords between minerals and CC
@@ -204,13 +213,13 @@ module AI
       bc = buildable_coords(x,y, height, width, target_height, target_width, rc)
       player.workers.first.build(UnitTypes::SpawningPool,	bc.last.x, bc.last.y)
       puts"voor brc"
-      brc = getBuildingCoordinates(bc.last.x, bc.last.y, target_height, target_width) 
+      brc = building_coordinates(bc.last.x, bc.last.y, target_height, target_width) 
       puts"brc complete"
       @rc.concat(brc)
       puts"concat rc complete"
       @rc.uniq!
       puts"uniq rc complete"
-      io = IssuedOrder.new(ProxyBot.instance.player.workers.first.id, Unit.mineral_cost(UnitTypes::SpawningPool), UnitTypes::SpawningPool)
+      io = IssuedOrder.new(player.workers.first.id, Unit.mineral_cost(UnitTypes::SpawningPool), UnitTypes::SpawningPool)
       puts"#{io.workerId},#{io.cost}"
       io
     end

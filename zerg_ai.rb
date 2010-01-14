@@ -92,7 +92,7 @@ module AI
           issued_orders.push(build_structure(center.x,center.y,4,4,buildorders.first.u,buildorders.first.v,@rc))
           puts"buildStructure complete"
           puts"issuedOrders.last.cost: #{issued_orders.last.cost}, issuedOrders.last.workerId: #{issued_orders.last.workerId}"
-          spent_minerals += issued_orders.last.cost
+          self.spent_minerals += issued_orders.last.cost
           puts"#buildOrderList: #{buildorders.length}, supply: #{buildorders.first.supply}, shifting"
           buildorders.shift
           puts"buildOrderList.shift complete"
@@ -100,12 +100,11 @@ module AI
 
         #presentWorkers = player.workers
 
-        puts"#{issued_orders.length}"
         issued_orders.each do |order|
           if (order.type == player.units[order.workerId].type)
             puts"done"
             puts"spentminerals #{spentMinerals}"
-            spent_minerals -= order.cost
+            self.spent_minerals -= order.cost
             puts"spentminerals #{spentMinerals} na deductie"
             issued_orders.delete_if{|x| x.workerId == order.workerId}
           end
@@ -133,6 +132,7 @@ module AI
         puts e.message
         puts e.backtrace
         puts "-------------"
+        sleep 10
       end
     end #on_frame
   end #class ZergAI

@@ -61,3 +61,24 @@ module AI
     end
   end
 end
+
+class Fixnum
+  def build_tiles
+    self * 32
+  end
+
+  def in_build_tiles
+    self / 32
+  end
+
+  def walk_tiles
+    self * 8
+  end
+
+  def in_walk_tiles
+    self / 8
+  end
+
+  alias :b_tiles :build_tiles
+  alias :w_tiles :walk_tiles
+end
