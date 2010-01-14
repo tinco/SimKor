@@ -1,343 +1,141 @@
-require 'RProxyBot/RProxyBot/proxybot.rb'
-require 'util.rb'
+require 'RProxyBot/RProxyBot/proxybot'
+require 'ai_helpers'
+require 'zerg_ai_helpers'
 
 module AI
 	class	ZergAI
     include RProxyBot
-		include	RProxyBOT::Constants
-		@@rc = []		
+		include	RProxyBot::Constants
+    include ZergAIHelpers
 	  
-	  #this method provides an array of mineralspots that are 
-	  #within a 9 unit radius of the command center
-	  def self.giveMineralSpots
-      ProxyBot.instance.units.minerals.select do |u|
-        u.distance_to(ProxyBot.instance.player.command_centers.first)<9
-      end
-    end
-    
-    def self.giveVespeneGeysers
-        ProxyBot.instance.units.vespene_geysers.select do |u|
-        u.distance_to(ProxyBot.instance.player.command_centers.first)<9
-      end
-    end
-    
-      #returns array of tile-coordinates of specified building
-      #building location (x,y), size a*b
-    def self.getBuildingCoordinates(x,y,a,b)
-        puts"building #{a}x#{b} at location (#{x},#{y})"
-        coords = Array.new
-        (0..b-1).each do |j|
-          
-          (0..a-1).each do |i|
-          
-            co = Coordinate.new(x+i,y+j)
-            coords.push(co)
-          end
-          
-        end
-      puts"*getBuildingCoordinates* returning array of building coordinates"
-      coords
-    end
-    
- 
-    def self.checkSite(x,y,u,v)
-      #checks if the  target building can be built on tile (x,y), using restricted tileset rc
-      #building has size u*v
-      #puts"checking Site"
-      buildable = true
-      coords = Array.new
-      freetiles = Array.new
-      (0..v-1).each do |j|
-        
-        (0..u-1).each do |i|
-        
-          co = Coordinate.new(x+i,y+j)
-          coords.push(co)
-        end
-      end
-      
-      #subtract the restricted coords array from the building_site_coordinates array
-      #puts"freetiles = coords - rc"
-      freetiles = coords - @@rc
-      #puts"freetiles = coords - rc DONE"
-      
-      #site is only buildable if all tiles are buildable
-      if (freetiles.length < u+v)
-        buildable = false
-      end
-      buildable
-      
-    end
-
-    def self.makeCoordArray(x,y,a,b,u,v)
-      puts"makeCoordArray called"
-      coords = Array.new
-      #(x,y) are CC coords, (a,b) are resource (mineral/geyser) coords
-      #u*v are dimensions of the tiles
-      #providing a coordinate and another coordinate/rester, this method provides an array of coordinates
-      #that fall within the coordinate and raster
-       
-      ([y,b].min..[y,(b+v)].max).each do |j|
-        
-        ([x,a].min..[x,(a+u)].max).each do |i|
-          
-          #create a coordinate with the x and y values, push on array
-          co = Coordinate.new(i,j)
-          coords.push(co)
-        end        
-      
-      end
-   
-      coords  
-      
-    end
-	  
-  
-	  def self.getRestrictedCoords
-	    #retrieve array of mineralspots close to CC
-	    mineralspots = giveMineralSpots
-	    vespenespots = giveVespeneGeysers
-	    
-	    #array of coords of geyser (1 geyser at the moment!)
-	    vespenecoords = Array.new
-      vespenecoords = getBuildingCoordinates(vespenespots.last.x,vespenespots.last.y,4,2)
-	    
-	    #create an array that will contrain all restricted coordinates
-	    rescoords = Array.new
-      #for every mineralspot, and array of restricted coordinates retrieved
-	    done = false
-	    while (done == false)
-	      rescoords.concat(makeCoordArray(ProxyBot.instance.player.command_centers.first.x,ProxyBot.instance.player.command_centers.first.y,mineralspots.last.x,mineralspots.last.y,2,1))
-	      mineralspots.pop
-	      done = mineralspots.last.nil?
-	    end
-	    
-	    done = false
-
-	    while (done == false)
-	      rescoords.concat(makeCoordArray(ProxyBot.instance.player.command_centers.first.x,ProxyBot.instance.player.command_centers.first.y,vespenecoords.last.x,vespenecoords.last.y,4,2))
-	      vespenecoords.pop
-	      done = vespenecoords.last.nil?
-	    end
-	     puts"end of getRestrictedCoords, rescoords.length #{rescoords.length}"
-	     rescoords
-    end
-	  
-	  def self.getSpiralCoords(x,y,a,b,n)
-	    #provides an array of coordinates around 
-	    #the a*b tileset located at coordinate (x,y)
-	    #distance spiral<->tileset is n
-	    
-	    #calculate the starting position for the spiral
-        xLoc = x-n
-        yLoc = y-n
-        
-        #The size of the source building determines the size of the spiral
-        rasterSizeX = (2*n)+a-1
-        rasterSizeY = (2*n)+b-1
-        kanBouwen = true
-        tiles = Array.new
-        
-          #Top row of tiles        
-          (0..(rasterSizeX)).each do |i|
-            xCoordinaat = xLoc + i
-            co = Coordinate.new(xCoordinaat,yLoc)
-            tiles.push(co)
-          end
-          
-          #Right row of tiles (excluding top right)          
-          (1..(rasterSizeY)).each do |i|
-            yCoordinaat = yLoc + i
-            co = Coordinate.new(xLoc+rasterSizeX,yCoordinaat)
-            tiles.push(co)
-          end
-          
-          #Bottom row of tiles (excluding bottom right)  
-          (0..(rasterSizeX-1)).each do |i|
-            xCoordinaat = xLoc + i
-            co = Coordinate.new(xCoordinaat,yLoc+rasterSizeY)
-            tiles.push(co)
-          end
-          
-          #Left row of tiles (excluding bottom left and top left)
-          (1..(rasterSizeY-1)).each do |i|
-            yCoordinaat = yLoc + i
-            co = Coordinate.new(xLoc,yCoordinaat)
-            tiles.push(co)
-          end
-        puts"*getSpiralCoords complete*"        
-        puts"Tiles.length #{tiles.length}"
-        tiles
-	  end
-	  
-	  def self.getBuildableCoords(x,y,a,b,u,v,rc)
-	    #returns all coordinates where the structure with size u*v
-	    #can be built around source building a*b at location (x,y)
-	    #bc are buildable coordinates
-	    bc = Array.new
-	    
-	    #n is iteratie nr. Voor gemak even hoogte van gebouw (zodat hij op horizontale rij geplaatst kan worden)
-      n = v
-      canBuild = false
-      noMoreCoordsAvail = false
-      #sc are spiral coordinates
-      #First receive the spiral of coords around source building
-      sc = Array.new
-      sc = getSpiralCoords(x,y,a,b,n)
-      while (noMoreCoordsAvail == false)
-        #For each coordinate in the spiral, check if the building can be placed
-        #puts"entering checkSite"
-        if(checkSite(sc.last.x,sc.last.y,u,v) == true)
-          co = Coordinate.new(sc.last.x,sc.last.y)
-          bc.push(co)
-        end
-        
-        sc.pop
-	      noMoreCoordsAvail = sc.last.nil?
-             
-      end
-      puts"*getBuildableCoords complete*"
-	    bc  
-	    
-	  end
-	  
-	  def self.buildStructure(x,y,a,b,u,v,rc)
-	    #(x,y), source bld coords, size a*b
-	    #target building size u*v
-	    #rc are restricted coords between minerals and CC
-	    #returns an order object containing order info
-	  
-	    bc = Array.new
-	    bc = getBuildableCoords(x,y,a,b,u,v,rc)
-      ProxyBot.instance.player.workers.first.build(UnitTypes::SpawningPool,	bc.last.x, bc.last.y)
-      puts"voor brc"
-      brc = getBuildingCoordinates(bc.last.x, bc.last.y,u,v) 
-      puts"brc complete"
-      @@rc.concat(brc)
-      puts"concat rc complete"
-      @@rc.uniq!
-      puts"uniq rc complete"
-      io = IssuedOrder.new(ProxyBot.instance.player.workers.first.id, Unit.mineral_cost(UnitTypes::SpawningPool), UnitTypes::SpawningPool)
-      puts"#{io.workerId},#{io.cost}"
-      io
-      
-    end
+    attr_accessor :rc
 		
-		def	self.start
-			Thread.new do
-				starcraft	=	ProxyBot.instance.game
-				player = starcraft.player
-				workers	=	player.workers
-				center = player.command_centers.first
-				larvae = player.larvae
-				eggs = player.eggs
-				minerals = starcraft.units.minerals.sort do	|a,	b|
-					b.distance_to(center)	<=>	a.distance_to(center)
-				end
-			
-			  workers.each do	|w|
-					w.right_click_unit(minerals.pop)
-				end
-        
-        CommandQueue.push(Constants::Commands::GameSpeed,0)
-        
-        buildOrder = BuildOrder.new(18,UnitTypes::SpawningPool,200,3,2)
-        buildOrderList = Array.new
-        buildOrderList.push(buildOrder)
-        buildOrder = BuildOrder.new(16,UnitTypes::SpawningPool,200,3,2)
-        buildOrderList.push(buildOrder)
-        buildOrder = BuildOrder.new(20,UnitTypes::SpawningPool,200,3,2)
-        buildOrderList.push(buildOrder)
-        puts"Eerste order: #{buildOrderList.first.supply}"
-        issuedOrders = Array.new
-        spentMinerals = 0
-        
-        puts"starting getRestrictedCoords"
-        @@rc = getRestrictedCoords
-        @@rc.uniq!
-        puts"testje (#{@@rc.last.x},#{@@rc.last.y})"
-        supplyplus = 18
-        puts"Spawningpool cost: #{Unit.mineral_cost(UnitTypes::SpawningPool)}"
-        puts"RestrictedCoords na uniq!: #{@@rc.length}"  
-        sleep(0.5)
+    attr_accessor :starcraft
 
-				center.train_unit(UnitTypes::Probe)
-				sleep(0.5) #We wait	a	few	frames to	make sure	the
-									 #orders have	been processed for the
-									 #the	loop (which	starts immediately)
+    attr_accessor :player, :center, :minerals, :workers
+    attr_accessor :larvae, :eggs, :buildorders, :supply_plus
+    attr_accessor :spent_minerals, :issued_orders
+    
+    def start(game)
+      @starcraft = game
+      @player = starcraft.player
+      @center = player.command_centers.first
+      @workers = player.workers
+			@larvae = player.larvae
+			@eggs = player.eggs
 
-				last_frame = -1
-				
-				  while(player.race == "Zerg")
-				    if(last_frame	== starcraft.frame)
-  						sleep(0.05)
-  						#puts "Sleeping for 0.05"
-  					else
-  					  last_frame = starcraft.frame
-             
-					    #gebruikt buildorder
-					    #bouw Overlord als alle supply in gebruik is en er meer dan 100 minerals zijn
-					    if (player.supply_used >= (supplyplus-2) && player.minerals >= 100)
-					      puts"maak overlord"
-					      if !(player.larvae.empty? == true)
-  						    player.larvae.first.train_unit(UnitTypes::Overlord)
-  						    supplyplus = supplyplus + 16
-  						  end				    
-					    end
-					    
-				      #bouw drone als de supply voor de volgende buildorder nog niet bereikt is
-				      #!!ERROR!! Script crasht hier als buildOrderList leeg is
-					    if (player.supply_used < buildOrderList.first.supply && player.supply_used < (supplyplus-2) && (player.minerals-spentMinerals)	>= 50 )
-					      puts"bouw drone"
-			          if !(player.larvae.empty? == true)
-  						    player.larvae.first.train_unit(UnitTypes::Drone)
-  						  end
-  						  
-  						end
-					    #als de buildorder supply is bereikt en voldoende minerals, bouw gebouw
-					    if (player.supply_used == buildOrderList.first.supply && player.minerals	>= buildOrder.cost)
-                puts"buildStructure"
-                issuedOrders.push(buildStructure(center.x,center.y,4,4,buildOrderList.first.u,buildOrderList.first.v,@@rc))
-                puts"buildStructure complete"
-                puts"issuedOrders.last.cost: #{issuedOrders.last.cost}, issuedOrders.last.workerId: #{issuedOrders.last.workerId}"
-                spentMinerals = spentMinerals + issuedOrders.last.cost
-                puts"#buildOrderList: #{buildOrderList.length}, supply: #{buildOrderList.first.supply}, shifting"
-                buildOrderList.shift
-                puts"buildOrderList.shift complete"
-              end
-					        
-					    #presentWorkers = player.workers
-					    
-					    puts"#{issuedOrders.length}"
-					    issuedOrders.each do |order|
-					      if (order.type == player.units[order.workerId].type)
-					        puts"done"
-					        puts"spentminerals #{spentMinerals}"
-					        spentMinerals = spentMinerals - order.cost
-					        puts"spentminerals #{spentMinerals} na deductie"
-					        issuedOrders.delete_if{|x| x.workerId == order.workerId}
-					      end
+      @minerals = starcraft.units.minerals.sort do |a, b|
+        b.distance_to(center) <=> a.distance_to(center)
+      end
 
-					    end
-  					    
-    					player.workers.each	do |worker|
+      workers.each do |w|
+        w.right_click_unit(minerals.pop)
+      end
 
-                #playerputs "Ga idle drones checken"
+      starcraft.command_queue.push(Commands::GameSpeed, 0)
 
-        				if worker.order	== Orders::PlayerGuard
-        				
-        				  #puts "Idle drone gevonden"
-        				
-        					worker.right_click_unit(minerals.last)
-        					
-        					#puts "Idle drone opdracht gegeven"
-        					
-        				end
-    					end
-      		  end
-    			end
-				end
-			end
-		end
-	end
-end
+      buildOrder = BuildOrder.new(18,UnitTypes::SpawningPool,200,3,2)
+      @buildorders = Array.new
+      @buildorders.push(buildOrder)
+      buildOrder = BuildOrder.new(16,UnitTypes::SpawningPool,200,3,2)
+      @buildorders.push(buildOrder)
+      buildOrder = BuildOrder.new(20,UnitTypes::SpawningPool,200,3,2)
+      @buildorders.push(buildOrder)
+      puts"Eerste order: #{@buildorders.first.supply}"
+      @issued_orders = Array.new
+      @spent_minerals = 0
+
+      puts"starting getRestrictedCoords"
+      @rc = restricted_coords
+      @rc.uniq!
+      puts"testje (#{@rc.last.x},#{@rc.last.y})"
+
+      @supply_plus = 18 #TODO dit is niet een goede naam
+      
+      puts"Spawningpool cost: #{Unit.mineral_cost(UnitTypes::SpawningPool)}"
+      puts"RestrictedCoords na uniq!: #{@rc.length}"  
+      sleep(0.5)
+
+      center.train_unit(UnitTypes::Probe)
+			sleep(0.5) #We wait	a	few	frames to	make sure	the
+								 #orders have	been processed for the
+
+    end
+
+    def on_frame
+      begin
+        #gebruikt buildorder
+        #bouw Overlord als alle supply in gebruik is en er meer dan 100 minerals zijn
+        if (player.supply_used >= (supply_plus - 2) && player.minerals >= 100)
+          puts"maak overlord"
+          if !(player.larvae.empty? == true)
+            player.larvae.first.train_unit(UnitTypes::Overlord)
+            self.supply_plus += 16
+          end				    
+        end
+
+        #bouw drone als de supply voor de volgende buildorder nog niet bereikt is
+        #!!ERROR!! Script crasht hier als buildOrderList leeg is
+        if (player.supply_used < buildorders.first.supply && 
+            player.supply_used < (supply_plus - 2) &&
+            (player.minerals - spent_minerals)	>= 50 )
+          puts"bouw drone"
+          if !(player.larvae.empty? == true)
+            player.larvae.first.train_unit(UnitTypes::Drone)
+          end
+
+        end
+
+        #als de buildorder supply is bereikt en voldoende minerals, bouw gebouw
+        if (player.supply_used == buildorders.first.supply && player.minerals	>= buildorders.first.cost)
+          puts"buildStructure"
+          issued_orders.push(build_structure(center.x,center.y,4,4,buildorders.first.u,buildorders.first.v,@rc))
+          puts"buildStructure complete"
+          puts"issuedOrders.last.cost: #{issued_orders.last.cost}, issuedOrders.last.workerId: #{issued_orders.last.workerId}"
+          spent_minerals += issued_orders.last.cost
+          puts"#buildOrderList: #{buildorders.length}, supply: #{buildorders.first.supply}, shifting"
+          buildorders.shift
+          puts"buildOrderList.shift complete"
+        end
+
+        #presentWorkers = player.workers
+
+        puts"#{issued_orders.length}"
+        issued_orders.each do |order|
+          if (order.type == player.units[order.workerId].type)
+            puts"done"
+            puts"spentminerals #{spentMinerals}"
+            spent_minerals -= order.cost
+            puts"spentminerals #{spentMinerals} na deductie"
+            issued_orders.delete_if{|x| x.workerId == order.workerId}
+          end
+
+        end
+
+        player.workers.each	do |worker|
+
+          #playerputs "Ga idle drones checken"
+
+          if worker.order	== Orders::PlayerGuard
+
+            #puts "Idle drone gevonden"
+
+            worker.right_click_unit(minerals.last)
+
+            #puts "Idle drone opdracht gegeven"
+
+          end
+        end
+
+        sleep 0.05 #FIXME is dit nodig?
+      rescue Exception => e
+        puts "-------------"
+        puts e.message
+        puts e.backtrace
+        puts "-------------"
+      end
+    end #on_frame
+  end #class ZergAI
+  p = RProxyBot::ProxyBot.instance
+  p.run(12345,"1","1","1","1", 20, ZergAI.new)
+end #module AI
