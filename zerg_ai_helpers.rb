@@ -25,7 +25,7 @@ module AI
 
         (0..height-1).each do |i|
 
-          co = Coordinate.new(x+i.build_tiles,y+j.build_tiles)
+          co = Coordinate.new(x+i,y+j)
           coords.push(co)
         end
 
@@ -46,7 +46,7 @@ module AI
 
         (0..height-1).each do |i|
 
-          co = Coordinate.new(x+i.build_tiles,y+j.build_tiles)
+          co = Coordinate.new(x+i,y+j)
           coords.push(co)
         end
       end
@@ -65,19 +65,19 @@ module AI
     end
 
     def make_coord_array(x,y,resource_x,resource_y, height, width)
-      puts"makeCoordArray called"
+      puts"makeCoordArray called: #{x}, #{y}, #{resource_x}, #{resource_y}"
       coords = Array.new
       #(x,y) are CC coords, (a,b) are resource (mineral/geyser) coords
       #u*v are dimensions of the tiles
       #providing a coordinate and another coordinate/rester, this method provides an array of coordinates
       #that fall within the coordinate and raster
 
-      ([y, resource_y].min.in_build_tiles..[y,(resource_y+width.b_tiles)].max.in_build_tiles).each do |j|
+      ([y, resource_y].min..[y,(resource_y+width)].max).each do |j|
 
-        ([x,resource_x].min.in_build_tiles..[x,(resource_x+height.b_tiles)].max.in_build_tiles).each do |i|
+        ([x,resource_x].min..[x,(resource_x+height)].max).each do |i|
 
           #create a coordinate with the x and y values, push on array
-          co = Coordinate.new(i.build_tiles,j.build_tiles)
+          co = Coordinate.new(i,j)
           coords.push(co)
         end        
 
@@ -95,7 +95,7 @@ module AI
 
       #array of coords of geyser (1 geyser at the moment!)
       vespenecoords = Array.new
-      vespenecoords = building_coordinates(vespenespots.last.x,vespenespots.last.y,4,2)
+      vespenecoords = building_coordinates(vespenespots.last.x.in_build_tiles,vespenespots.last.y.in_build_tiles,4,2)
       puts "Vespenecoords.length #{vespenecoords.length}"
 
       #create an array that will contrain all restricted coordinates
@@ -103,10 +103,10 @@ module AI
       #for every mineralspot, and array of restricted coordinates retrieved
       done = false
       while (not done)
-        rescoords.concat(make_coord_array(player.command_centers.first.x, 
-                                          player.command_centers.first.y,
-                                          mineralspots.last.x,
-                                          mineralspots.last.y, 2,1))
+        rescoords.concat(make_coord_array(player.command_centers.first.x.in_build_tiles, 
+                                          player.command_centers.first.y.in_build_tiles,
+                                          mineralspots.last.x.in_build_tiles,
+                                          mineralspots.last.y.in_build_tiles, 2,1))
         mineralspots.pop
         done = mineralspots.last.nil?
       end
@@ -114,10 +114,10 @@ module AI
       done = false
 
       while (not done)
-        rescoords.concat(make_coord_array(player.command_centers.first.x,
-                                          player.command_centers.first.y,
-                                          vespenecoords.last.x,
-                                          vespenecoords.last.y, 4, 2))
+        rescoords.concat(make_coord_array(player.command_centers.first.x.in_build_tiles,
+                                          player.command_centers.first.y.in_build_tiles,
+                                          vespenecoords.last.x.in_build_tiles,
+                                          vespenecoords.last.y.in_build_tiles, 4, 2))
         vespenecoords.pop
         done = vespenecoords.last.nil?
       end
@@ -131,39 +131,39 @@ module AI
       #distance spiral<->tileset is n
 
       #calculate the starting position for the spiral
-      xLoc = x - distance.build_tiles
-      yLoc = y - distance.build_tiles
+      xLoc = x - distance
+      yLoc = y - distance
 
       #The size of the source building determines the size of the spiral
-      rasterSizeX = (2*distance.b_tiles)+height.b_tiles-1
-      rasterSizeY = (2*distance.b_tiles)+width.b_tiles-1
+      rasterSizeX = (2*distance)+height-1
+      rasterSizeY = (2*distance)+width-1
       kanBouwen = true
       tiles = Array.new
 
       #Top row of tiles        
-      (0..(rasterSizeX.in_build_tiles)).each do |i|
-        xCoordinaat = xLoc + i.build_tiles
+      (0..(rasterSizeX)).each do |i|
+        xCoordinaat = xLoc + i
         co = Coordinate.new(xCoordinaat,yLoc)
         tiles.push(co)
       end
 
       #Right row of tiles (excluding top right)          
-      (1..(rasterSizeY.in_build_tiles)).each do |i|
-        yCoordinaat = yLoc + i.build_tiles
+      (1..(rasterSizeY)).each do |i|
+        yCoordinaat = yLoc + i
         co = Coordinate.new(xLoc+rasterSizeX,yCoordinaat)
         tiles.push(co)
       end
 
       #Bottom row of tiles (excluding bottom right)  
-      (0..(rasterSizeX-1).in_build_tiles).each do |i|
-        xCoordinaat = xLoc + i.build_tiles
+      (0..(rasterSizeX-1)).each do |i|
+        xCoordinaat = xLoc + i
         co = Coordinate.new(xCoordinaat,yLoc+rasterSizeY)
         tiles.push(co)
       end
 
       #Left row of tiles (excluding bottom left and top left)
-      (1..(rasterSizeY-1).in_build_tiles).each do |i|
-        yCoordinaat = yLoc + i.build_tiles
+      (1..(rasterSizeY-1)).each do |i|
+        yCoordinaat = yLoc + i
         co = Coordinate.new(xLoc,yCoordinaat)
         tiles.push(co)
       end

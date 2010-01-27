@@ -49,15 +49,15 @@ module AI
     attr_accessor :supply
     attr_accessor :building
     attr_accessor :cost
-    attr_accessor :u
-    attr_accessor :v
+    attr_accessor :height
+    attr_accessor :width
 
-    def initialize(supply,building,cost,u,v)
+    def initialize(supply,building,cost,height,width)
       @supply = supply
       @building = building
       @cost = cost
-      @u = u
-      @v = v
+      @height = height
+      @width = width
     end
   end
 end

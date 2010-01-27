@@ -76,7 +76,7 @@ module AI
 
         #bouw drone als de supply voor de volgende buildorder nog niet bereikt is
         #!!ERROR!! Script crasht hier als buildOrderList leeg is
-        if (player.supply_used < buildorders.first.supply && 
+        if (buildorders.first && player.supply_used < buildorders.first.supply && 
             player.supply_used < (supply_plus - 2) &&
             (player.minerals - spent_minerals)	>= 50 )
           puts"bouw drone"
@@ -89,7 +89,7 @@ module AI
         #als de buildorder supply is bereikt en voldoende minerals, bouw gebouw
         if (player.supply_used == buildorders.first.supply && player.minerals	>= buildorders.first.cost)
           puts"buildStructure"
-          issued_orders.push(build_structure(center.x,center.y,4,4,buildorders.first.u,buildorders.first.v,@rc))
+          issued_orders.push(build_structure(center.x.in_build_tiles,center.y.in_build_tiles,4,4,buildorders.first.height,buildorders.first.width,@rc))
           puts"buildStructure complete"
           puts"issuedOrders.last.cost: #{issued_orders.last.cost}, issuedOrders.last.workerId: #{issued_orders.last.workerId}"
           self.spent_minerals += issued_orders.last.cost
@@ -103,9 +103,9 @@ module AI
         issued_orders.each do |order|
           if (order.type == player.units[order.workerId].type)
             puts"done"
-            puts"spentminerals #{spentMinerals}"
+            puts"spentminerals #{spent_minerals}"
             self.spent_minerals -= order.cost
-            puts"spentminerals #{spentMinerals} na deductie"
+            puts"spentminerals #{spent_minerals} na deductie"
             issued_orders.delete_if{|x| x.workerId == order.workerId}
           end
 
