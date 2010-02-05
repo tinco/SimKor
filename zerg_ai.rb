@@ -47,6 +47,36 @@ module AI
         end
       end
     end
+
+    #A step in a strategy with its post and pre conditions
+    class StrategyStep
+      attr_accessor :postconditions, :preconditions, :order
+
+      def initialize(postconditions, preconditions, &order)
+        self.postconditions = postconditions
+        self.preconditions = preconditions
+        self.order = order
+      end
+
+      def execute
+        order.call
+      end
+
+      def satisfied?
+        postconditions.collect(&:met?).empty?
+      end
+
+      def requirements_met?
+        preconditions.collect(&:met?).empty?
+      end
+    end #class StrategyStep
+
+    #Conditions are procs that should return a boolean value
+    class Condition < Proc
+      def met?
+        self.call
+      end
+    end #class Condition
   end #class ZergAI
 
   p = RProxyBot::ProxyBot.instance
