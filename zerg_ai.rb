@@ -10,13 +10,12 @@ module AI
 
     include ZergAIHelpers
 	  
-    attr_accessor :starcraft
+    attr_accessor :state
+    attr_accessor :strategy_steps
 
     #Start of the game
     def start(game)
-      @starcraft = game
-
-      initialize_state
+      self.state = initialize_state(game)
 
       perfect_split
 
@@ -48,6 +47,16 @@ module AI
       end
     end
 
+    #makes the strategy consisting of steps
+    def initialize_strategy
+      self.strategy_steps = []
+    end
+
+    #build a unit
+    def spawn(unit_type)
+      state.eggs.first.spawn(unit_type)
+    end
+
     #A step in a strategy with its post and pre conditions
     class StrategyStep
       attr_accessor :postconditions, :preconditions, :order
@@ -62,10 +71,12 @@ module AI
         order.call
       end
 
+      #A step has been satisfied if all its postconditions have been met
       def satisfied?
         postconditions.collect(&:met?).empty?
       end
-
+        
+      #A step is ready to be executed if all its preconditions have been met
       def requirements_met?
         preconditions.collect(&:met?).empty?
       end
