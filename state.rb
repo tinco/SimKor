@@ -27,7 +27,7 @@ module AI
         if not units.has_key? unit.id
           s_unit =  StateUnit.new(unit)
           units[unit.id] = s_unit
-          player.units[unit.id] = s_unit
+          players[unit.player_id].units[unit.id] = s_unit
         end
       end
 
@@ -96,6 +96,7 @@ module AI
   end
 
   class StateUnit
+    include RProxyBot::Constants::Orders
     attr_accessor :unit
     attr_accessor :issued_orders
 
@@ -106,12 +107,26 @@ module AI
 
     def spawn(unit_type)
       issue_order(Order.new(
-        lambda {
+        Condition.new {
           unit.type == unit_type
         }, lambda {
           unit.train_unit(unit_type)
         }
       ))
+    end
+
+    def mine(mineral_camp)
+      issue_order(Order.new(
+        Condition.new {
+          false #a unit mines indefinately
+        }, lambda {
+          unit.right_click_unit(mineral_camp)
+        }
+      ))
+    end
+
+    def idle?
+      issued_orders.empty? && order == PlayerGuard
     end
 
     def issue_order(order)
@@ -139,7 +154,7 @@ module AI
     end
 
     def completed?
-      postcondition.call
+      postcondition.met?
     end
 
     def execute

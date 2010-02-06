@@ -41,10 +41,6 @@ module AI
       end
     end #on_frame
 
-    #execute a perfect split
-    def perfect_split
-    end
-
     #execute a step that is not satisfied, and execute it, if its requirements are met.
     def execute_strategy
       strategy_steps.reject(&:satisfied?).each do |step|
@@ -57,11 +53,51 @@ module AI
     #makes the strategy consisting of steps
     def initialize_strategy
       self.strategy_steps = []
+
+      #Basic Strategy:
+      #Every idle worker should mine:
+      strategy_steps << StrategyStep.new([Condition::True], [Condition::False]) do
+        center = player.command_centers.first
+
+        minerals = starcraft.units.minerals.sort do |a, b|
+          b.distance_to(center) <=> a.distance_to(center)
+        end
+        
+        player.workers.select(&:idle?).each do |worker|
+          worker.mine(minerals.pop)
+        end
+      end
+      #At 5 supply, 200 minerals a spawning pool should be made
+      mineral_condition = Condition.new {player.minerals > 200}
+      supply_condition = Condition.new {player.minerals >= 5}
+      post_condition = Condition.new do
+        not player.units.values.select {|u| u.type == SpawningPool && u.is_completed?}.empty?
+      end
+
+      strategy_steps << StrategyStep.new([mineral_condition, supply_condition],[post_condition]) do
+        puts "ik ga een spawning pool maken"
+      end
+      #When there is a spawning pool and enough minerals and supply, a zergling should be made
+      #When there is not enough supply an overlord should be spawned
+      #When there are 5 zerglings, they should attack
     end
 
     #build a unit
     def spawn(unit_type)
       player.larvae.first.spawn(unit_type)
+    end
+
+    #execute a perfect split
+    def perfect_split
+      center = player.command_centers.first
+
+      minerals = starcraft.units.minerals.sort do |a, b|
+        b.distance_to(center) <=> a.distance_to(center)
+      end
+
+      player.workers.each do |worker|
+        worker.mine(minerals.pop)
+      end
     end
 
     #make the methods of the state available here
@@ -77,7 +113,7 @@ module AI
     class StrategyStep
       attr_accessor :postconditions, :preconditions, :order
 
-      def initialize(postconditions, preconditions, &order)
+      def initialize(preconditions, postconditions, &order)
         self.postconditions = postconditions
         self.preconditions = preconditions
         self.order = order
@@ -89,22 +125,26 @@ module AI
 
       #A step has been satisfied if all its postconditions have been met
       def satisfied?
-        postconditions.collect(&:met?).empty?
+        postconditions.reject(&:met?).empty?
       end
         
       #A step is ready to be executed if all its preconditions have been met
       def requirements_met?
-        preconditions.collect(&:met?).empty?
+        preconditions.reject(&:met?).empty?
       end
     end #class StrategyStep
 
-    #Conditions are procs that should return a boolean value
-    class Condition < Proc
-      def met?
-        self.call
-      end
-    end #class Condition
   end #class ZergAI
+
+  #Conditions are procs that should return a boolean value
+  class Condition < Proc
+    def met?
+      self.call
+    end
+
+    False = Condition.new {false}
+    True = Condition.new {true}
+  end #class Condition
 
   p = RProxyBot::ProxyBot.instance
   p.run(12345,"1","1","1","1", 20, ZergAI.new)
