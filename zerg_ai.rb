@@ -27,6 +27,7 @@ module AI
     #Every frame
     def on_frame
       begin
+        state.update
         execute_strategy
       rescue Exception => e
         puts "-------------"
