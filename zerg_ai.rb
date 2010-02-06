@@ -1,6 +1,7 @@
 require 'RProxyBot/RProxyBot/proxybot'
 require 'ai_helpers'
 require 'zerg_ai_helpers'
+require 'state'
 
 module AI
 	class	ZergAI
@@ -15,7 +16,9 @@ module AI
 
     #Start of the game
     def start(game)
-      self.state = initialize_state(game)
+      self.state = State.new(game)
+
+      game.command_queue.push(Commands::GameSpeed, 0)
 
       perfect_split
 
@@ -38,7 +41,10 @@ module AI
       end
     end #on_frame
 
-    private
+    #execute a perfect split
+    def perfect_split
+    end
+
     #execute a step that is not satisfied, and execute it, if its requirements are met.
     def execute_strategy
       strategy_steps.reject(&:satisfied?).each do |step|
@@ -55,7 +61,16 @@ module AI
 
     #build a unit
     def spawn(unit_type)
-      state.eggs.first.spawn(unit_type)
+      player.larvae.first.spawn(unit_type)
+    end
+
+    #make the methods of the state available here
+    def method_missing(name, *params)
+      if state.respond_to? name
+        state.send name, *params
+      else
+        super
+      end
     end
 
     #A step in a strategy with its post and pre conditions

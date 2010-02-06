@@ -2,10 +2,22 @@ module AI
   class State
     attr_accessor :starcraft
     attr_accessor :units
+    attr_accessor :player
+    attr_accessor :players
 
     def initialize(game)
       self.starcraft = game  
       self.units = {}
+      self.players = {}
+
+      #make StatePlayers for all players
+      starcraft.players.each do |player|
+        players[player.id] = StatePlayer.new(player)
+      end
+
+      #the player itself
+      self.player = players[starcraft.player.id]
+
       update
     end
 
@@ -13,15 +25,75 @@ module AI
       starcraft.units.each do |unit|
         #make StateUnits for all units
         if not units.has_key? unit.id
-          units[unit.id] = StateUnit.new(unit)
+          s_unit =  StateUnit.new(unit)
+          units[unit.id] = s_unit
+          player.units[unit.id] = s_unit
         end
       end
+
       #clean issued_orders
-      units.each do |unit|
+      units.values.each do |unit|
         unit.issued_orders.reject!(&:completed?)
       end
     end
   end # class State
+
+  class StatePlayer
+    include RProxyBot::Constants::UnitTypes
+    
+    attr_accessor :player
+    attr_reader :units
+
+    def initialize(player)
+      self.player = player
+      @units = {}
+    end
+
+    def command_centers
+      units.values.select do |unit|
+        unit.is_resource_depot?
+      end
+    end
+
+    def workers
+      units.values.select do |unit|
+        unit.is_worker?
+      end
+    end
+
+    def larvae
+      units.values.select do |unit|
+        unit.type == Larva
+      end
+    end	
+
+    def get_all_by_unit_type(unittype)
+      units.values.select do |unit|
+        unit.type == unittype
+      end
+    end
+
+    def overlords
+      units.values.select do |unit|
+        unit.type == Overlord
+      end
+    end
+
+    def eggs
+      units.values.select do |unit|
+        unit.type == Egg
+      end
+    end
+
+    #propagate method calls to hidden player
+    def method_missing(name, *params)
+      if player.respond_to? name
+        player.send(name, *params)
+      else
+        super
+      end
+    end
+  end
 
   class StateUnit
     attr_accessor :unit
@@ -33,12 +105,16 @@ module AI
     end
 
     def spawn(unit_type)
-      order do
-        unit.train_unit(unit_type)
-      end
+      issue_order(Order.new(
+        lambda {
+          unit.type == unit_type
+        }, lambda {
+          unit.train_unit(unit_type)
+        }
+      ))
     end
 
-    def order(&order)
+    def issue_order(order)
       issued_orders << order
       order.execute
     end
@@ -57,7 +133,7 @@ module AI
     attr_accessor :postcondition
     attr_accessor :order
 
-    def initialize(postcondition, &order)
+    def initialize(postcondition, order)
       self.postcondition = postcondition
       self.order = order
     end
