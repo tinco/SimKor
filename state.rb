@@ -31,11 +31,13 @@ module AI
         end
       end
 
+      player.update
+
       #clean issued_orders
       units.values.each do |unit|
         unit.issued_orders.reject!(&:completed?)
       end
-    end
+    end #method update
   end # class State
 
   class StatePlayer
@@ -47,6 +49,34 @@ module AI
     def initialize(player)
       self.player = player
       @units = {}
+      @spent_minerals = 0
+      @spent_supply = 0
+      @spent_gas = 0
+    end
+
+    def update
+      unit.issued_orders.each do |order|
+        if order.is_a? SpendingOrder
+          if not order.substracted? && order.started?
+            @spent_minerals -= order.cost.minerals
+            @spent_gas -= order.cost.gas
+            @spent_supply -= order.cost.supply
+            order.substracted!
+          end
+        end
+      end
+    end
+
+    def minerals
+      player.minerals - @spent_minerals
+    end
+
+    def supply_used
+      player.supply_used - @spent_supply
+    end
+
+    def gas
+      player.gas - @spent_gas
     end
 
     def command_centers
@@ -96,7 +126,9 @@ module AI
   end
 
   class StateUnit
+    include RProxyBot
     include RProxyBot::Constants::Orders
+    include ConditionSyntax
     attr_accessor :unit
     attr_accessor :issued_orders
 
@@ -106,8 +138,13 @@ module AI
     end
 
     def spawn(unit_type)
-      issue_order(Order.new(
-        Condition.new {
+      issue_order(SpendingOrder.new(
+        condition {
+          unit.type == Egg || unit.type == unit_type
+        }, OpenStruct.new({:minerals => Unit.mineral_cost(unit_type),
+                          :gas => Unit.gas_cost(unit_type),
+                          :supply => Unit.supply_required(unit_type)}),
+        condition {
           unit.type == unit_type
         }, lambda {
           unit.train_unit(unit_type)
@@ -117,7 +154,7 @@ module AI
 
     def mine(mineral_camp)
       issue_order(Order.new(
-        Condition.new {
+        condition {
           false #a unit mines indefinately
         }, lambda {
           unit.right_click_unit(mineral_camp)
@@ -144,6 +181,9 @@ module AI
     end
   end
 
+  ##Yo dude, je moet even Order en SpendingOrder samen nemen, en dan issue_order hierboven aanpassen om
+  ##de @spent_resource waardes aan te vullen met de kosten van de order, en dan zou ie moeten werken denk ik.
+  
   class Order
     attr_accessor :postcondition
     attr_accessor :order
@@ -162,5 +202,32 @@ module AI
     end
 
     #TODO: Order#failed?
-  end
+  end #class Order
+
+  class SpendingOrder < Order
+    attr_accessor :cost
+    attr_accessor :startedcondition
+
+    def initialize(startedcondition, cost, postcondition, order)
+      super(postcondition, order)
+      self.startedcondition = startedcondition
+      self.cost = cost
+    end
+
+    def started?
+      startedcondition.met?
+    end
+
+    def execute
+
+    end
+
+    def costs_substracted!
+      @substracted = true
+    end
+
+    def costs_substracted?
+      @bsubstracted
+    end
+  end #class SpendingOrder
 end # module AI

@@ -1,7 +1,9 @@
 require 'RProxyBot/RProxyBot/proxybot'
+require 'condition'
 require 'ai_helpers'
 require 'zerg_ai_helpers'
 require 'state'
+require 'ostruct'
 
 module AI
 	class	ZergAI
@@ -10,6 +12,7 @@ module AI
     include RProxyBot::Constants::UnitTypes
 
     include ZergAIHelpers
+    include ConditionSyntax
 	  
     attr_accessor :state
     attr_accessor :strategy_steps
@@ -68,9 +71,9 @@ module AI
         end
       end
       #At 5 supply, 200 minerals a spawning pool should be made
-      mineral_condition = Condition.new {player.minerals > 200}
-      supply_condition = Condition.new {player.minerals >= 5}
-      post_condition = Condition.new do
+      mineral_condition = condition {player.minerals > 200}
+      supply_condition = condition {player.minerals >= 5}
+      post_condition = condition do
         not player.units.values.select {|u| u.type == SpawningPool && u.is_completed?}.empty?
       end
 
@@ -135,16 +138,6 @@ module AI
     end #class StrategyStep
 
   end #class ZergAI
-
-  #Conditions are procs that should return a boolean value
-  class Condition < Proc
-    def met?
-      self.call
-    end
-
-    False = Condition.new {false}
-    True = Condition.new {true}
-  end #class Condition
 
   p = RProxyBot::ProxyBot.instance
   p.run(12345,"1","1","1","1", 20, ZergAI.new)
