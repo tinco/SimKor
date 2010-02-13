@@ -1,7 +1,6 @@
 require 'RProxyBot/RProxyBot/proxybot'
 require 'condition'
 require 'ai_helpers'
-require 'zerg_ai_helpers'
 require 'state'
 require 'ostruct'
 
@@ -20,12 +19,9 @@ module AI
     #Start of the game
     def start(game)
       self.state = State.new(game)
+      self.strategy_steps = []
 
       game.command_queue.push(Commands::GameSpeed, 0)
-
-      perfect_split
-
-      spawn Drone
 
       initialize_strategy
     end
@@ -55,88 +51,110 @@ module AI
 
     #makes the strategy consisting of steps
     def initialize_strategy
-      self.strategy_steps = []
-
       #Basic Strategy:
-      #Every idle worker should mine:
-      strategy_steps << StrategyStep.new([Condition::True], [Condition::False]) do
-        center = player.command_centers.first
-
-        minerals = starcraft.units.minerals.sort do |a, b|
-          b.distance_to(center) <=> a.distance_to(center)
+      strategy_step "Every idle worker should mine" do
+        precondition do
+          true #No requirements
         end
-        
-        player.workers.select(&:idle?).each do |worker|
-          worker.mine(minerals.pop)
+
+        postcondition do
+          false #this step should be repeated
+        end
+
+        order do
+          center = player.command_centers.first
+
+          minerals = starcraft.units.minerals.sort do |a, b|
+            b.distance_to(center) <=> a.distance_to(center)
+          end
+
+          player.workers.select(&:idle?).each do |worker|
+            worker.mine(minerals.pop)
+          end
         end
       end
-      #At 5 supply, 200 minerals a spawning pool should be made
-      mineral_condition = condition {player.minerals > 200}
-      supply_condition = condition {player.minerals >= 5}
-      post_condition = condition do
-        not player.units.values.select {|u| u.type == SpawningPool && u.is_completed?}.empty?
-      end
 
-      strategy_steps << StrategyStep.new([mineral_condition, supply_condition],[post_condition]) do
-        puts "ik ga een spawning pool maken"
-      end
-      #When there is a spawning pool and enough minerals and supply, a zergling should be made
       #When there is not enough supply an overlord should be spawned
+      strategy_step "Spawn an overlord" do
+        precondition do
+          player.minerals >= 100 && player.supply_total >= player.supply_used #not smart
+        end
+
+        postcondition do
+          false #this step should be repeated
+        end
+
+        order do
+          spawn Overlord
+        end
+      end
+
+      #When there is less than 5 supply and a spawning pool does not exist, a drone should be spawned
+      strategy_step "Spawn a drone" do
+        precondition do
+          player.minerals >= 50 && player.supply_total < 5
+        end
+
+        postcondition do
+          false #this step should be repeated
+        end
+
+        order do
+          spawn Drone
+        end
+      end
+
+      #At 5 supply, 200 minerals a spawning pool should be made
+      strategy_step "Make a spawning pool at 5 supply" do
+        precondition do
+          player.minerals > 200 && player.supply_total >= 5
+        end
+
+        postcondition do
+          player.units.values.any? {|u| u.type == SpawningPool && u.is_completed?}
+        end
+
+        order do
+          player.workers.first.build(SpawningPool, build_location(SpawningPool))
+        end
+      end
+
+      #When there is a spawning pool and enough minerals and supply, a zergling should be made
+      strategy_step "Make zerglings" do
+        precondition do
+          player.minerals > 50 && player.supply_left >= 1
+        end
+
+        precondition do #a spawning pool exists
+          player.units.values.any? {|u| u.type == SpawningPool && u.is_completed?}
+        end
+
+        postcondition do
+          false #this step should be repeated
+        end
+
+        order do
+          while (player.minerals > 50 && player.supply_left >= 1) do
+            spawn Zergling #spawn many zerglings in one frame
+          end
+        end
+      end
+
       #When there are 5 zerglings, they should attack
-    end
+      strategy_step "Attack!" do
+        precondition do
+          player.get_all_by_unit_type(Zergling).count >= 5
+        end
 
-    #build a unit
-    def spawn(unit_type)
-      player.larvae.first.spawn(unit_type)
-    end
+        postcondition do
+          false #just keep on doin' it
+        end
 
-    #execute a perfect split
-    def perfect_split
-      center = player.command_centers.first
-
-      minerals = starcraft.units.minerals.sort do |a, b|
-        b.distance_to(center) <=> a.distance_to(center)
-      end
-
-      player.workers.each do |worker|
-        worker.mine(minerals.pop)
+        order do
+          #yeah.. about that..
+        end
       end
     end
-
-    #make the methods of the state available here
-    def method_missing(name, *params)
-      if state.respond_to? name
-        state.send name, *params
-      else
-        super
-      end
-    end
-
-    #A step in a strategy with its post and pre conditions
-    class StrategyStep
-      attr_accessor :postconditions, :preconditions, :order
-
-      def initialize(preconditions, postconditions, &order)
-        self.postconditions = postconditions
-        self.preconditions = preconditions
-        self.order = order
-      end
-
-      def execute
-        order.call
-      end
-
-      #A step has been satisfied if all its postconditions have been met
-      def satisfied?
-        postconditions.reject(&:met?).empty?
-      end
-        
-      #A step is ready to be executed if all its preconditions have been met
-      def requirements_met?
-        preconditions.reject(&:met?).empty?
-      end
-    end #class StrategyStep
-
   end #class ZergAI
 
   p = RProxyBot::ProxyBot.instance
