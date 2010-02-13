@@ -10,7 +10,7 @@ module AI
 		include	RProxyBot::Constants
     include RProxyBot::Constants::UnitTypes
 
-    include ZergAIHelpers
+    include AIHelpers
     include ConditionSyntax
 	  
     attr_accessor :state
@@ -74,25 +74,10 @@ module AI
         end
       end
 
-      #When there is not enough supply an overlord should be spawned
-      strategy_step "Spawn an overlord" do
-        precondition do
-          player.minerals >= 100 && player.supply_total >= player.supply_used #not smart
-        end
-
-        postcondition do
-          false #this step should be repeated
-        end
-
-        order do
-          spawn Overlord
-        end
-      end
-
       #When there is less than 5 supply and a spawning pool does not exist, a drone should be spawned
       strategy_step "Spawn a drone" do
         precondition do
-          player.minerals >= 50 && player.supply_total < 5
+          player.minerals >= 50 && player.supply_used < 5
         end
 
         postcondition do
@@ -101,6 +86,21 @@ module AI
 
         order do
           spawn Drone
+        end
+      end
+
+      #When there is not enough supply an overlord should be spawned
+      strategy_step "Spawn an overlord" do
+        precondition do
+          player.minerals >= 100 && player.supply_total <= player.supply_used #not smart
+        end
+
+        postcondition do
+          false #this step should be repeated
+        end
+
+        order do
+          spawn Overlord
         end
       end
 

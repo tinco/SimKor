@@ -21,6 +21,10 @@ module AI
       update
     end
 
+    def map
+      starcraft.map
+    end
+
     def update
       starcraft.units.each do |unit|
         #make StateUnits for all units
@@ -144,6 +148,7 @@ module AI
     include RProxyBot::Constants::Orders
     include RProxyBot::Constants::UnitTypes
     include ConditionSyntax
+
     attr_accessor :unit
     attr_accessor :issued_orders
     attr_accessor :player
@@ -163,7 +168,7 @@ module AI
           unit.type == unit_type
         },
         condition {
-          unit.type == Egg || unit.type == unit_type
+          type == Egg || type == unit_type
         }, OpenStruct.new({:minerals => Unit.mineral_cost(unit_type),
                           :gas => Unit.gas_cost(unit_type),
                           :supply => Unit.supply_required(unit_type)})
@@ -181,13 +186,15 @@ module AI
     def build(building, location)
       issue_order(Order.new(
         lambda {
-          #unit...
+          unit.build(building, location[:x], location[:y])
         },
         condition {
-          #unit is weg en er bestaat een gebouw
+          #unit is gebouw geworden
+          unit.type == building
         },
         condition {
           #de unit is aan het bouwen of postcondition
+          unit.is_morphing? || unit.type == building
         }, OpenStruct.new({:minerals => Unit.mineral_cost(building),
                           :gas => Unit.gas_cost(building),
                           :supply => Unit.supply_required(building)})
