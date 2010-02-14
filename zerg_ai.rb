@@ -2,6 +2,7 @@ require 'RProxyBot/RProxyBot/proxybot'
 require 'condition'
 require 'ai_helpers'
 require 'state'
+require 'strategy'
 require 'ostruct'
 
 module AI
@@ -111,7 +112,7 @@ module AI
         end
 
         postcondition do
-          player.units.values.any? {|u| u.type == SpawningPool && u.is_completed?}
+          player.units.values.any? {|u| u.type == SpawningPool}
         end
 
         order do
@@ -126,7 +127,7 @@ module AI
         end
 
         precondition do #a spawning pool exists
-          player.units.values.any? {|u| u.type == SpawningPool && u.is_completed?}
+          player.units.values.any? {|u| u.type == SpawningPool}
         end
 
         postcondition do
@@ -134,7 +135,7 @@ module AI
         end
 
         order do
-          while (player.minerals > 50 && player.supply_left >= 1) do
+          while (player.minerals > 50 && player.supply_left >= 1 && player.larvae.first) do
             spawn Zergling #spawn many zerglings in one frame
           end
         end
@@ -153,6 +154,15 @@ module AI
         order do
           #yeah.. about that..
         end
+      end
+    end
+
+    #make the methods of the state available here
+    def method_missing(name, *params)
+      if state.respond_to? name
+        state.send name, *params
+      else
+        super
       end
     end
   end #class ZergAI
