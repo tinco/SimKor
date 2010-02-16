@@ -95,9 +95,12 @@ module AI
     def to_s
       "#{@x},#{@y}"
     end
-
   end
 end #module AI
+
+def proc_bind(env, &block) 
+  Proc.new { env.instance_eval(&block) } #TODO: when arguments are necessary replace with instance_exec
+end
 
 class Fixnum
   def build_tiles

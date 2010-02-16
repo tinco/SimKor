@@ -1,19 +1,29 @@
 module AI
+  class Step
+    def initialize(env, &block)
+      @env = env
+      instance_eval &block
+    end
+
+    def make_condition(&block)
+      Condition.new(&(proc_bind(@env, &block)))
+    end
+
+    def make_proc(&block)
+      proc_bind(@env, &block)
+    end
+  end
   ##strategy steps:
   #A step in a strategy with its post and pre conditions
-  class StrategyStep
-    include AIHelpers
-		include	RProxyBot::Constants
-    include RProxyBot::Constants::UnitTypes
-
-    attr_accessor :name, :postconditions, :preconditions, :order
+  class StrategyStep < Step
+    attr_accessor :name, :postconditions, :preconditions, :progressconditions, :order
 
     def initialize(name, env, &block)
       self.name = name
       self.postconditions = []
       self.preconditions = []
-      @env = env
-      instance_eval &block
+      self.progressconditions = []
+      super env, &block
     end
 
     def execute
@@ -30,39 +40,37 @@ module AI
       preconditions.all? &:met?
     end
 
+    #A step is in progress if any of its progressconditions are met
+    def in_progress?
+      progressconditions.any? &:met?
+    end
+
     def precondition(&condition)
-      preconditions << Condition.new(&condition)
+      preconditions << make_condition(&condition)
     end
 
     def postcondition(&condition)
-      postconditions << Condition.new(&condition)
+      postconditions << make_condition(&condition)
+    end
+
+    def progresscondition(&condition)
+      progressconditions << make_condition(&condition)
     end
 
     def order(&block)
       if block
-        @order = block
+        @order = make_proc(&block)
       else
         @order
       end
     end
-
-    def method_missing(name, *args)
-      @env.send name, *args
-    end
   end #class StrategyStep
 
-  class Order
+  class Order < Step
     attr_accessor :postcondition
     attr_accessor :startedcondition
     attr_accessor :order
     attr_accessor :cost
-
-    def initialize(order, postcondition = Condition::False, startedcondition = Condition::True, cost = nil)
-      self.postcondition = postcondition
-      self.order = order
-      self.startedcondition = startedcondition
-      self.cost = cost
-    end
 
     def completed?
       postcondition.met?
@@ -78,6 +86,30 @@ module AI
 
     def started?
       startedcondition.met?
+    end
+
+    def postcondition(&block) #must this be DRY'ed up with started and order?
+      if block
+        @postcondition = make_condition(&block)
+      else
+        @postcondition
+      end
+    end
+
+    def startedcondition(&block)
+      if block
+        @startedcondition = make_condition(&block)
+      else
+        @startedcondition
+      end
+    end
+
+    def order(&block) #must this be DRY'ed up with started and post?
+      if block
+        @order = make_proc(&block)
+      else
+        @order
+      end
     end
 
     def costs_substracted!

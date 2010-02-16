@@ -43,7 +43,7 @@ module AI
 
     #execute a step that is not satisfied, and execute it, if its requirements are met.
     def execute_strategy
-      strategy_steps.reject(&:satisfied?).each do |step|
+      strategy_steps.reject {|s|s.satisfied? || s.in_progress?}.each do |step|
         if step.requirements_met?
           step.execute
         end
