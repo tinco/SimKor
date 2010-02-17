@@ -67,13 +67,18 @@ module AI
   end #class StrategyStep
 
   class Order < Step
+    include RProxyBot
     attr_accessor :postcondition
     attr_accessor :startedcondition
     attr_accessor :order
     attr_accessor :cost
 
     def completed?
-      postcondition.met?
+      if postcondition
+        postcondition.met?
+      else
+        true
+      end
     end
 
     def execute
@@ -85,7 +90,11 @@ module AI
     end
 
     def started?
-      startedcondition.met?
+      if startedcondition
+        startedcondition.met?
+      else
+        true
+      end
     end
 
     def postcondition(&block) #must this be DRY'ed up with started and order?
@@ -109,6 +118,14 @@ module AI
         @order = make_proc(&block)
       else
         @order
+      end
+    end
+
+    def cost(hash=nil)
+      if hash
+        @cost = OpenStruct.new(hash)
+      else
+        @cost
       end
     end
 
