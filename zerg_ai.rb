@@ -20,9 +20,9 @@ module AI
     #Start of the game
     def start(game)
       self.state = State.new(game)
-      self.strategy_steps = []
+      self.strategy_steps = {}
 
-      game.command_queue.push(Commands::GameSpeed, 0)
+      #game.command_queue.push(Commands::GameSpeed, 0)
 
       initialize_strategy
     end
@@ -43,7 +43,7 @@ module AI
 
     #execute a step that is not satisfied, and execute it, if its requirements are met.
     def execute_strategy
-      strategy_steps.reject {|s|s.satisfied? || s.in_progress?}.each do |step|
+      strategy_steps.values.reject {|s|s.satisfied? || s.in_progress?}.each do |step|
         if step.requirements_met?
           step.execute
         end
@@ -78,7 +78,7 @@ module AI
       #When there is less than 5 supply and a spawning pool does not exist, a drone should be spawned
       strategy_step "Spawn a drone" do
         precondition do
-          player.minerals >= 50 && player.supply_used < 5
+          player.minerals >= 50 && player.supply_used < 10
         end
 
         postcondition do
@@ -96,6 +96,10 @@ module AI
           player.minerals >= 100 && player.supply_total <= player.supply_used #not smart
         end
 
+        progresscondition do
+          player.units.values.any? {|unit| unit.issued_orders.first && unit.issued_orders.first.name == "Spawn Overlord"}
+        end
+
         postcondition do
           false #this step should be repeated
         end
@@ -105,14 +109,34 @@ module AI
         end
       end
 
+      strategy_step "Go scout" do
+        precondition do
+          false #player.units.values.count(&:is_worker?) >= 5
+        end
+
+        postcondition do
+          #arrived_at_unexplored_enemy_location
+        end
+
+        order do
+          #scout = player.workers.select {|w|w.issued_orders.first.name == "Mine" }.first
+          #scout.issued_orders = []
+          #scout.move_to unexplored_enemy_location
+        end
+      end
+
       #At 5 supply, 200 minerals a spawning pool should be made
       strategy_step "Make a spawning pool at 5 supply" do
         precondition do
-          player.minerals > 200 && player.supply_total >= 5
+          player.minerals > 200 && player.supply_total >= 10
         end
 
         postcondition do
           player.units.values.any? {|u| u.type == SpawningPool}
+        end
+
+        progresscondition do
+          player.units.values.any? {|unit| unit.issued_orders.first && unit.issued_orders.first.name == "Build SpawningPool"}
         end
 
         order do
@@ -123,11 +147,11 @@ module AI
       #When there is a spawning pool and enough minerals and supply, a zergling should be made
       strategy_step "Make zerglings" do
         precondition do
-          player.minerals > 50 && player.supply_left >= 1
+          player.minerals > 50 && player.supply_left >= 2
         end
 
         precondition do #a spawning pool exists
-          player.units.values.any? {|u| u.type == SpawningPool}
+          player.units.values.any? {|u| u.type == SpawningPool }
         end
 
         postcondition do
@@ -135,7 +159,7 @@ module AI
         end
 
         order do
-          while (player.minerals > 50 && player.supply_left >= 1 && player.larvae.first) do
+          while (player.minerals > 50 && player.supply_left >= 2 && player.larva_available?) do
             spawn Zergling #spawn many zerglings in one frame
           end
         end
@@ -152,7 +176,9 @@ module AI
         end
 
         order do
-          #yeah.. about that..
+          player.get_all_by_unit_type(Zergling).select(&:idle?).each do |z|
+            attack_nearest_enemy(z)
+          end
         end
       end
     end
@@ -168,5 +194,5 @@ module AI
   end #class ZergAI
 
   p = RProxyBot::ProxyBot.instance
-  p.run(12345,"1","1","1","1", 20, ZergAI.new)
+  p.run(12345,"0","1","0","1", 20, ZergAI.new)
 end #module AI

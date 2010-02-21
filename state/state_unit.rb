@@ -15,13 +15,17 @@ module AI
     end
 
     def spawn(unit_type)
-      issue_order do
+      issue_order "Spawn #{Unit.name(unit_type)}" do
         order do
           unit.train_unit(unit_type)
         end
 
         postcondition do
           type == unit_type
+        end
+
+        failedcondition do
+          type != Egg #hier moet iets slimmers voor komen...
         end
 
         startedcondition do
@@ -35,15 +39,35 @@ module AI
     end
 
     def mine(mineral_camp)
-      issue_order do
+      issue_order "Mine" do
         order do
           unit.right_click_unit(mineral_camp)
         end
       end
     end
 
+    def destroyed?
+      dead?
+    end
+
+    def attack(enemy)
+      issue_order "Attack" do
+        order do
+          unit.right_click_unit(enemy)
+        end
+
+        postcondition do
+          enemy.dead?
+        end
+
+        failedcondition do
+          unit.order == PlayerGuard
+        end
+      end
+    end
+
     def build(building, location)
-      issue_order do
+      issue_order "Build #{Unit.name(building)}" do
         order do
           unit.build(building, location[:x], location[:y])
         end
@@ -63,11 +87,17 @@ module AI
     end
 
     def idle?
-      issued_orders.empty? && order == PlayerGuard
+      issued_orders.empty? && (
+        if type == Drone
+          order == PlayerGuard
+        else
+          true
+        end
+      )
     end
 
-    def issue_order(&block)
-      issued_orders << order = Order.new(self, &block)
+    def issue_order(name, &block)
+      issued_orders << order = Order.new(self, name, &block)
       order.execute
       player.process(order)
       order

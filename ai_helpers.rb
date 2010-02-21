@@ -5,12 +5,25 @@ module AI
     include RProxyBot::Constants::UnitTypes
     #strategy definition method:
     def strategy_step(name, &block)
-      strategy_steps << StrategyStep.new(name, self, &block)
+      strategy_steps.merge!({name => StrategyStep.new(name, self, &block)})
     end
 
     #build a unit
     def spawn(unit_type)
-      player.larvae.first.spawn(unit_type) if player.larvae.first
+      if (larva = player.available_larva)
+        larva.spawn(unit_type)
+      end
+    end
+
+    def attack_nearest_enemy(unit)
+      #attack units first!
+      if((enemies = enemy.units.values.reject(&:is_building?).reject(&:dead?).reject(&:is_worker?).reject(&:is_flyer?)).any? ||
+       (enemies = enemy.units.values.reject(&:is_building?).reject(&:dead?).reject(&:is_flyer?)).any? ||
+       (enemies = enemy.units.values.reject(&:destroyed?)).any?) ||
+       (enemies = state.starcraft.units.select(&:is_refinery?))
+        enemy = enemies.sort_by {|e| unit.distance_to(e)}.first
+      end
+      unit.attack enemy if enemy
     end
 
     #get a valid build location

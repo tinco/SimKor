@@ -11,6 +11,7 @@ module AI
       @spent_minerals = 0
       @spent_supply = 0
       @spent_gas = 0
+      @supply_gained
     end
 
     def update
@@ -44,8 +45,13 @@ module AI
       player.supply_used - @spent_supply
     end
 
+    def supply_total
+      (player.units.values.select {|u|u.type == Hatchery || u.type == Lair || u.type == Hive}.count * 2) +
+      (player.units.values.select {|u|u.type == Overlord}.count * 16)
+    end
+
     def supply_left
-      player.supply_total - supply_used
+      supply_total - supply_used
     end
 
     def gas
@@ -69,6 +75,14 @@ module AI
         unit.type == Larva
       end
     end	
+
+    def available_larva
+      larvae.select(&:idle?).first
+    end
+
+    def larva_available?
+      larvae.any?(&:idle?)
+    end
 
     def get_all_by_unit_type(unittype)
       units.values.select do |unit|

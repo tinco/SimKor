@@ -45,8 +45,12 @@ module AI
       progressconditions.any? &:met?
     end
 
-    def precondition(&condition)
-      preconditions << make_condition(&condition)
+    def precondition(name=nil, &condition)
+      if name
+        preconditions.merge @env.strategy_steps[name].postconditions
+      else
+        preconditions << make_condition(&condition)
+      end
     end
 
     def postcondition(&condition)
@@ -72,6 +76,12 @@ module AI
     attr_accessor :startedcondition
     attr_accessor :order
     attr_accessor :cost
+    attr_accessor :name
+
+    def initialize(env, name, &block)
+      self.name = name
+      super env, &block
+    end
 
     def completed?
       if postcondition
@@ -97,6 +107,14 @@ module AI
       end
     end
 
+    def has_failed?
+      if failedcondition
+        failedcondition.met?
+      else
+        false
+      end
+    end
+
     def postcondition(&block) #must this be DRY'ed up with started and order?
       if block
         @postcondition = make_condition(&block)
@@ -110,6 +128,14 @@ module AI
         @startedcondition = make_condition(&block)
       else
         @startedcondition
+      end
+    end
+
+    def failedcondition(&block)
+      if block
+        @failedcondition = make_condition(&block)
+      else
+        @failedcondition
       end
     end
 

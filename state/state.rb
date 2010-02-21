@@ -11,14 +11,18 @@ module AI
       self.players = {}
 
       #make StatePlayers for all players
-      starcraft.players.each do |player|
-        players[player.id] = StatePlayer.new(player)
+      starcraft.players.each do |id, player|
+        players[id] = StatePlayer.new(player)
       end
 
       #the player itself
       self.player = players[starcraft.player.id]
 
       update
+    end
+
+    def enemy
+      players.values.reject(&:ally?).first
     end
 
     def map
@@ -40,6 +44,7 @@ module AI
       #clean issued_orders
       units.values.each do |unit|
         unit.issued_orders.reject!(&:completed?)
+        unit.issued_orders.select(&:has_failed?).each do |o| o.execute end #reissue failed orders.
       end
     end #method update
   end # class State
