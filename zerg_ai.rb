@@ -22,7 +22,7 @@ module AI
       self.state = State.new(game)
       self.strategy_steps = {}
 
-      #game.command_queue.push(Commands::GameSpeed, 0)
+      game.command_queue.push(Commands::GameSpeed, 0)
 
       initialize_strategy
     end
