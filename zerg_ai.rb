@@ -176,7 +176,7 @@ module AI
         end
 
         order do
-          player.get_all_by_unit_type(Zergling).select(&:idle?).each do |z|
+          player.get_all_by_unit_type(Zergling).reject(&:dead?).select(&:idle?).each do |z|
             attack_nearest_enemy(z)
           end
         end
