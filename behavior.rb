@@ -9,8 +9,8 @@ class Behavior
 
   attr_accessor :unit
 
-  def trigger(event_name)
-    instance_eval &(self.class.reactions[event_name])
+  def reactions
+    self.class.reactions
   end
 end
 
@@ -21,14 +21,24 @@ class MoveBehavior < Behavior
 end
 
 class Unit
+  attr_accessor :behavior
+
+  def trigger(event_name, *params)
+    behavior.reactions[event_name].call(*params)
+  end
+
+  def exert(behavior, *params)
+    self.behavior = behavior.new(*params)
+    self.behavior.unit = self
+  end
+
   def hold
     puts "holding"
   end
 end
 
 zergling = Unit.new
-behavior = MoveBehavior.new
-behavior.unit = zergling
-behavior.trigger :reached_destination
+zergling.exert(MoveBehavior)
+zergling.trigger :reached_destination
 
 # holding
