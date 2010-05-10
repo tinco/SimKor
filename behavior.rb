@@ -41,8 +41,6 @@ class Unit
   end
 end
 
-#hoe triggeren we deze events?
-#hoe krijgen units behaviours?
 #een unit krijgt een missie, Scout, Guard, Miner, Attacker
 #een unit met een missie kan tasks toegewezen krijgen: ScoutThere, GuardHere, AttackThere, ExpandHere
 #een unit met een behavior mag zijn eigen tijd besteden voor dingen binnen zijn behavior.
