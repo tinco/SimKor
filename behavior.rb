@@ -1,22 +1,18 @@
 class Behavior
   def self.on_event(name, &block)
-    reactions[name] = block
-  end
-
-  def self.reactions
-    @reactions ||= {}
+    define_method(name, &block)
   end
 
   attr_accessor :unit
-
-  def reactions
-    self.class.reactions
-  end
 end
 
 class MoveBehavior < Behavior
   on_event :reached_destination do
     unit.hold
+  end
+
+  on_event :seen_treasure do |position|
+    unit.move(position)
   end
 end
 
@@ -24,7 +20,7 @@ module Behaves
   attr_accessor :behavior
 
   def trigger(event_name, *params)
-    behavior.instance_eval(*params, &(behavior.reactions[event_name]))
+    behavior.send(event_name, *params)
   end
 
   def exert(behavior, *params)
@@ -38,6 +34,10 @@ class Unit
 
   def hold
     puts "holding"
+  end
+
+  def move(pos)
+    puts "moving: #{pos}"
   end
 end
 
@@ -53,5 +53,6 @@ end
 zergling = Unit.new
 zergling.exert(MoveBehavior)
 zergling.trigger :reached_destination
+zergling.trigger :seen_treasure, 5
 
 # holding
