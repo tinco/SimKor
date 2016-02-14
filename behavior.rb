@@ -56,3 +56,36 @@ zergling.trigger :reached_destination
 zergling.trigger :seen_treasure, 5
 
 # holding
+
+class RendezvousBehavior
+  include Behavior
+
+  mission "rendezvous at location", :with => [:location]
+
+  events {
+    :arrival => [ReachedLocation, :unit, :location],
+    :in_attack_range => [InAttackRange, :unit],
+    :unreachable => [OrderCancelled, :unit],
+    :enemy_in_range => [EnemyInRange, :unit]
+  }
+
+  def arrival
+    @unit.halt
+  end
+
+  def in_attack_range(enemy)
+    @unit.reroute
+  end
+
+  def unreachable
+    @unit.wait_for_further_orders
+  end
+
+  def enemy_in_range(enemy)
+    @unit.attack_while_moving(enemy)
+  end
+
+  def initialize(location)
+    @location = location
+  end
+end
