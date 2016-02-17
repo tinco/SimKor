@@ -6,14 +6,14 @@ require 'strategy'
 require 'ostruct'
 
 module AI
-	class	ZergAI
+  class ZergAI
     include RProxyBot
-		include	RProxyBot::Constants
+    include RProxyBot::Constants
     include RProxyBot::Constants::UnitTypes
 
     include AIHelpers
     include ConditionSyntax
-	  
+
     attr_accessor :state
     attr_accessor :strategy_steps
 
