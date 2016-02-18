@@ -12,27 +12,32 @@ class ZergAI < Bwapi::Bot
   attr_accessor :strategy_steps
 
   #Start of the game
-  def on_start(game)
-    @state = State.new(game)
+  def on_start
+    @state = AI::State.new(game)
     @strategy_steps = {}
 
-    game.command_queue.push(Commands::GameSpeed, 0)
+    game.local_speed = 0
 
     initialize_strategy
+  rescue Exception => e
+    puts "-------------"
+    puts e.message
+    puts e.backtrace
+    puts "-------------"
+    sleep 5
+    exit
   end
 
   #Every frame
   def on_frame
-    begin
-      state.update
-      execute_strategy
-    rescue Exception => e
-      puts "-------------"
-      puts e.message
-      puts e.backtrace
-      puts "-------------"
-      sleep 10
-    end
+    state.update
+    execute_strategy
+  rescue Exception => e
+    puts "-------------"
+    puts e.message
+    puts e.backtrace
+    puts "-------------"
+    sleep 5
   end #on_frame
 
   #execute a step that is not satisfied, and execute it, if its requirements are met.

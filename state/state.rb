@@ -11,12 +11,12 @@ module AI
       self.players = {}
 
       #make StatePlayers for all players
-      starcraft.players.each do |id, player|
-        players[id] = StatePlayer.new(player)
+      starcraft.players.each do |player|
+        players[player.id] = StatePlayer.new(player)
       end
 
       #the player itself
-      self.player = players[starcraft.player.id]
+      self.player = players[starcraft.self.id]
 
       update
     end
@@ -30,12 +30,12 @@ module AI
     end
 
     def update
-      starcraft.units.each do |unit|
+      starcraft.all_units.each do |unit|
         #make StateUnits for all units
         if not units.has_key? unit.id
-          s_unit =  StateUnit.new(unit,players[unit.player_id])
+          s_unit =  StateUnit.new(unit, players[unit.player.id])
           units[unit.id] = s_unit
-          players[unit.player_id].units[unit.id] = s_unit
+          players[unit.player.id].units[unit.id] = s_unit
         end
       end
 
