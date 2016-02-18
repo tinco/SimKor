@@ -1,7 +1,7 @@
 module AI
   module ZergAIHelpers
-    include RProxyBot
-    include RProxyBot::Constants
+    include Bwapi
+
     #this method provides an array of mineralspots that are 
     #within a 9 unit radius of the command center
     def initial_mineral_spots

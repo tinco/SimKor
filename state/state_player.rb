@@ -1,7 +1,7 @@
 module AI
   class StatePlayer
-    include RProxyBot::Constants::UnitTypes
-    
+    include Bwapi
+
     attr_accessor :player
     attr_reader :units
 
@@ -72,7 +72,7 @@ module AI
 
     def larvae
       units.values.select do |unit|
-        unit.type == Larva
+        unit.type == UnitType.Larva
       end
     end	
 
@@ -92,13 +92,13 @@ module AI
 
     def overlords
       units.values.select do |unit|
-        unit.type == Overlord
+        unit.type == UnitType.Overlord
       end
     end
 
     def eggs
       units.values.select do |unit|
-        unit.type == Egg
+        unit.type == UnitType.Egg
       end
     end
 

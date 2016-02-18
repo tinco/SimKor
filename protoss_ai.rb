@@ -2,7 +2,7 @@ require 'RProxyBot/RProxyBot/proxybot.rb'
 require 'util.rb'
 
 module AI
-  class ProtossAI
+  class Protoss
     include RProxyBot
     include RProxyBot::Constants
 

@@ -71,7 +71,6 @@ module AI
   end #class StrategyStep
 
   class Order < Step
-    include RProxyBot
     attr_accessor :postcondition
     attr_accessor :startedcondition
     attr_accessor :order

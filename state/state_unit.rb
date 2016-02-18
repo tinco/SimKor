@@ -1,8 +1,6 @@
 module AI
   class StateUnit
-    include RProxyBot
-    include RProxyBot::Constants::Orders
-    include RProxyBot::Constants::UnitTypes
+    include Bwapi
 
     attr_accessor :unit
     attr_accessor :issued_orders
@@ -25,11 +23,11 @@ module AI
         end
 
         failedcondition do
-          type != Egg #hier moet iets slimmers voor komen...
+          type != UnitType.Egg #hier moet iets slimmers voor komen...
         end
 
         startedcondition do
-          type == Egg || type == unit_type #fancy method needed to DRY this up
+          type == UnitType.Egg || type == unit_type #fancy method needed to DRY this up
         end
 
         cost({:minerals => Unit.mineral_cost(unit_type),
@@ -88,8 +86,8 @@ module AI
 
     def idle?
       issued_orders.empty? && (
-        if type == Drone
-          order == PlayerGuard
+        if type == UnitType.Drone
+          order == Order.PlayerGuard
         else
           true
         end

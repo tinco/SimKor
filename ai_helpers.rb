@@ -1,8 +1,7 @@
 module AI
-  module AIHelpers
-    include RProxyBot
-    include RProxyBot::Constants
-    include RProxyBot::Constants::UnitTypes
+  module Helpers
+    include Bwapi
+
     #strategy definition method:
     def strategy_step(name, &block)
       strategy_steps.merge!({name => StrategyStep.new(name, self, &block)})
