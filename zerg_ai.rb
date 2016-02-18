@@ -154,7 +154,7 @@ class ZergStrategy
       end
 
       order do
-        player.workers.first.build(SpawningPool, build_location(UnitType.Zerg_Spawning_Pool))
+        player.workers.first.build(UnitType.Zerg_Spawning_Pool, build_location(UnitType.Zerg_Spawning_Pool))
       end
     end
 

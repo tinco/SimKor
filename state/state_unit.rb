@@ -57,6 +57,10 @@ module AI
       dead?
     end
 
+    def dead?
+      exists? #TODO this does not cover it. It could also just be invisible
+    end
+
     def attack(enemy)
       issue_order "Attack" do
         order do
@@ -74,9 +78,9 @@ module AI
     end
 
     def build(building, location)
-      issue_order "Build #{Unit.name(building)}" do
+      issue_order "Build #{building}" do
         order do
-          unit.build(building, location[:x], location[:y])
+          unit.build(building, TilePosition.new(location[:x], location[:y]))
         end
 
         postcondition do

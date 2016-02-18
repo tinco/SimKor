@@ -46,8 +46,8 @@ module AI
     end
 
     def supply_total
-      (player.units.values.select {|u|u.type == Hatchery || u.type == Lair || u.type == Hive}.count * 2) +
-      (player.units.values.select {|u|u.type == Overlord}.count * 16)
+      (units.values.select {|u|u.type == UnitType.Zerg_Hatchery || u.type == UnitType.Zerg_Lair || u.type == UnitType.Zerg_Hive}.count * 2) +
+      (units.values.select {|u|u.type == UnitType.Zerg_Overlord}.count * 16)
     end
 
     def supply_left
