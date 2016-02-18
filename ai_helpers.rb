@@ -16,10 +16,10 @@ module AI
 
     def attack_nearest_enemy(unit)
       #attack units first!
-      if((enemies = enemy.units.values.reject(&:is_building?).reject(&:dead?).reject(&:is_worker?).reject(&:is_flyer?)).any? ||
-       (enemies = enemy.units.values.reject(&:is_building?).reject(&:dead?).reject(&:is_flyer?)).any? ||
+      if((enemies = enemy.units.values.reject(&:building?).reject(&:dead?).reject(&:worker?).reject(&:flyer?)).any? ||
+       (enemies = enemy.units.values.reject(&:building?).reject(&:dead?).reject(&:flyer?)).any? ||
        (enemies = enemy.units.values.reject(&:destroyed?)).any?) ||
-       (enemies = state.starcraft.units.select(&:is_refinery?))
+       (enemies = state.starcraft.units.select(&:refinery?))
         enemy = enemies.sort_by {|e| unit.distance_to(e)}.first
       end
       unit.attack enemy if enemy

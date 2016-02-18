@@ -3,22 +3,16 @@ require 'ai_helpers'
 require 'state'
 require 'strategy'
 require 'ostruct'
+require 'forwardable'
 
 class ZergAI < Bwapi::Bot
-  include AI::Helpers
-  include AI::ConditionSyntax
-
-  attr_accessor :state
-  attr_accessor :strategy_steps
+  attr_accessor :strategy, :state
 
   #Start of the game
   def on_start
-    @state = AI::State.new(game)
-    @strategy_steps = {}
-
     game.local_speed = 0
-
-    initialize_strategy
+    @state = AI::State.new(game)
+    @strategy = ZergStrategy.new(state)
   rescue Exception => e
     puts "-------------"
     puts e.message
@@ -31,7 +25,7 @@ class ZergAI < Bwapi::Bot
   #Every frame
   def on_frame
     state.update
-    execute_strategy
+    strategy.execute
   rescue Exception => e
     puts "-------------"
     puts e.message
@@ -39,9 +33,30 @@ class ZergAI < Bwapi::Bot
     puts "-------------"
     sleep 5
   end #on_frame
+end
+
+class ZergStrategy
+  extend Forwardable
+
+  include AI::Helpers
+  include AI::ConditionSyntax
+
+  attr_accessor :state
+  attr_accessor :strategy_steps
+
+  delegate player: :state, 
+           units: :state,
+           players: :state,
+           starcraft: :state 
+
+  def initialize(state)
+    @strategy_steps = {}
+    @state = state
+    initialize_strategy
+  end
 
   #execute a step that is not satisfied, and execute it, if its requirements are met.
-  def execute_strategy
+  def execute
     strategy_steps.values.reject {|s|s.satisfied? || s.in_progress?}.each do |step|
       if step.requirements_met?
         step.execute
@@ -64,8 +79,8 @@ class ZergAI < Bwapi::Bot
       order do
         center = player.command_centers.first
 
-        minerals = starcraft.units.minerals.sort do |a, b|
-          b.distance_to(center) <=> a.distance_to(center)
+        minerals = state.units.values.select{|u| u.type.mineral_field? }.sort do |a, b|
+          b.distance(center) <=> a.distance(center)
         end
 
         player.workers.select(&:idle?).each do |worker|
@@ -85,7 +100,7 @@ class ZergAI < Bwapi::Bot
       end
 
       order do
-        spawn Drone
+        spawn UnitType.Zerg_Drone
       end
     end
 
@@ -104,13 +119,13 @@ class ZergAI < Bwapi::Bot
       end
 
       order do
-        spawn Overlord
+        spawn UnitType.Zerg_Overlord
       end
     end
 
     strategy_step "Go scout" do
       precondition do
-        false #player.units.values.count(&:is_worker?) >= 5
+        false #player.units.values.count(&:worker?) >= 5
       end
 
       postcondition do
@@ -131,7 +146,7 @@ class ZergAI < Bwapi::Bot
       end
 
       postcondition do
-        player.units.values.any? {|u| u.type == SpawningPool}
+        player.units.values.any? {|u| u.type == UnitType.Zerg_Spawning_Pool}
       end
 
       progresscondition do
@@ -139,7 +154,7 @@ class ZergAI < Bwapi::Bot
       end
 
       order do
-        player.workers.first.build(SpawningPool, build_location(SpawningPool))
+        player.workers.first.build(SpawningPool, build_location(UnitType.Zerg_Spawning_Pool))
       end
     end
 
@@ -150,7 +165,7 @@ class ZergAI < Bwapi::Bot
       end
 
       precondition do #a spawning pool exists
-        player.units.values.any? {|u| u.type == SpawningPool }
+        player.units.values.any? {|u| u.type == UnitType.Zerg_Spawning_Pool }
       end
 
       postcondition do
@@ -159,7 +174,7 @@ class ZergAI < Bwapi::Bot
 
       order do
         while (player.minerals > 50 && player.supply_left >= 2 && player.larva_available?) do
-          spawn Zergling #spawn many zerglings in one frame
+          spawn UnitType.Zerg_Zergling #spawn many zerglings in one frame
         end
       end
     end
@@ -167,7 +182,7 @@ class ZergAI < Bwapi::Bot
     #When there are 5 zerglings, they should attack
     strategy_step "Attack!" do
       precondition do
-        player.get_all_by_unit_type(Zergling).count >= 5
+        player.get_all_by_unit_type(UnitType.Zerg_Zergling).count >= 5
       end
 
       postcondition do
@@ -175,7 +190,7 @@ class ZergAI < Bwapi::Bot
       end
 
       order do
-        player.get_all_by_unit_type(Zergling).reject(&:dead?).select(&:idle?).each do |z|
+        player.get_all_by_unit_type(UnitType.Zerg_Zergling).reject(&:dead?).select(&:idle?).each do |z|
           attack_nearest_enemy(z)
         end
       end

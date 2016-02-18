@@ -60,19 +60,19 @@ module AI
 
     def command_centers
       units.values.select do |unit|
-        unit.is_resource_depot?
+        unit.resource_depot?
       end
     end
 
     def workers
       units.values.select do |unit|
-        unit.is_worker?
+        unit.worker?
       end
     end
 
     def larvae
       units.values.select do |unit|
-        unit.type == UnitType.Larva
+        unit.type == UnitType.Zerg_Larva
       end
     end	
 
@@ -92,13 +92,13 @@ module AI
 
     def overlords
       units.values.select do |unit|
-        unit.type == UnitType.Overlord
+        unit.type == UnitType.Zerg_Overlord
       end
     end
 
     def eggs
       units.values.select do |unit|
-        unit.type == UnitType.Egg
+        unit.type == UnitType.Zerg_Egg
       end
     end
 

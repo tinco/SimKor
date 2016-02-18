@@ -13,9 +13,9 @@ module AI
     end
 
     def spawn(unit_type)
-      issue_order "Spawn #{Unit.name(unit_type)}" do
+      issue_order "Spawn #{unit_type.to_s}" do
         order do
-          unit.train_unit(unit_type)
+          unit.train(unit_type)
         end
 
         postcondition do
@@ -23,23 +23,32 @@ module AI
         end
 
         failedcondition do
-          type != UnitType.Egg #hier moet iets slimmers voor komen...
+          type != UnitType.Zerg_Egg #hier moet iets slimmers voor komen...
         end
 
         startedcondition do
-          type == UnitType.Egg || type == unit_type #fancy method needed to DRY this up
+          type == UnitType.Zerg_Egg || type == unit_type #fancy method needed to DRY this up
         end
 
-        cost({:minerals => Unit.mineral_cost(unit_type),
-              :gas => Unit.gas_cost(unit_type),
-              :supply => Unit.supply_required(unit_type)})
+        cost({:minerals => unit_type.mineral_price,
+              :gas => unit_type.gas_price,
+              :supply => unit_type.supply_required})
       end
     end
 
+    # override for overloaded java method
+    def distance(other_unit)
+      unit.java_send :getDistance, [Java::Bwapi::Unit], other_unit.unit
+    end
+
+    def right_click_unit(other_unit)
+      unit.java_send :rightClick, [Java::Bwapi::Unit], other_unit.unit
+    end
+    
     def mine(mineral_camp)
       issue_order "Mine" do
         order do
-          unit.right_click_unit(mineral_camp)
+          right_click_unit(mineral_camp)
         end
       end
     end
@@ -51,7 +60,7 @@ module AI
     def attack(enemy)
       issue_order "Attack" do
         order do
-          unit.right_click_unit(enemy)
+          right_click_unit(enemy)
         end
 
         postcondition do
@@ -75,18 +84,18 @@ module AI
         end
 
         startedcondition do
-          type == building || is_morphing? #fancy method needed to DRY this up
+          type == building || morphing? #fancy method needed to DRY this up
         end
 
-        cost({:minerals => Unit.mineral_cost(building),
-              :gas => Unit.gas_cost(building),
-              :supply => Unit.supply_required(building)})
+        cost({:minerals => building.mineral_price,
+              :gas => building.gas_price,
+              :supply => building.supply_required})
       end
     end
 
     def idle?
       issued_orders.empty? && (
-        if type == UnitType.Drone
+        if type == UnitType.Zerg_Drone
           order == Order.PlayerGuard
         else
           true
@@ -95,16 +104,18 @@ module AI
     end
 
     def issue_order(name, &block)
-      issued_orders << order = Order.new(self, name, &block)
+      issued_orders << order = StrategyOrder.new(self, name, &block)
       order.execute
       player.process(order)
       order
     end
 
-    #try to propagate method calls to the hidden unit
+    #try to propagate method calls to the hidden unit and its type
     def method_missing(name, *params)
       if unit.respond_to? name
         unit.send(name, *params)
+      elsif unit.type.respond_to? name
+        unit.type.send(name, *params)
       else
         super
       end

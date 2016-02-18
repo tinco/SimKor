@@ -70,7 +70,7 @@ module AI
     end
   end #class StrategyStep
 
-  class Order < Step
+  class StrategyOrder < Step
     attr_accessor :postcondition
     attr_accessor :startedcondition
     attr_accessor :order
