@@ -13,6 +13,11 @@ class ZergAI < Bwapi::Bot
     game.local_speed = 0
     @state = AI::State.new(game)
     @strategy = ZergStrategy.new(state)
+
+    puts "Analyzing map..."
+    Bwapi::BWTA.readMap
+    Bwapi::BWTA.analyze
+    puts "Map data ready"
   rescue Exception => e
     puts "-------------"
     puts e.message
@@ -120,6 +125,34 @@ class ZergStrategy
 
       order do
         spawn UnitType.Zerg_Overlord
+      end
+    end
+
+    strategy_step "Early overlord scout" do
+      overlord = nil
+      target = nil
+
+      precondition do
+        overlords = player.get_all_by_unit_type(UnitType.Zerg_Overlord)
+        if overlords.count == 1
+          overlord = overlords.first
+          locations = BWTA.base_locations.to_a
+          center = player.command_centers.first
+
+          target = locations.sort do |a, b|
+            center.position.getDistance(b.position) <=> center.position.getDistance(a.position)
+          end[1].position
+
+          true
+        end
+      end
+
+      postcondition do
+        overlord.position == target if overlord
+      end
+
+      order do
+        overlord.move(target) if overlord
       end
     end
 
