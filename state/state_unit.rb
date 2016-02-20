@@ -44,6 +44,10 @@ module AI
     def right_click_unit(other_unit)
       unit.java_send :rightClick, [Java::Bwapi::Unit], other_unit.unit
     end
+
+    def has_order?(order_name)
+      issued_orders.any? {|o| o.name == order_name }
+    end
     
     def mine(mineral_camp)
       issue_order "Mine" do

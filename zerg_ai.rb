@@ -11,13 +11,14 @@ class ZergAI < Bwapi::Bot
   #Start of the game
   def on_start
     game.local_speed = 0
-    @state = AI::State.new(game)
-    @strategy = ZergStrategy.new(state)
 
     puts "Analyzing map..."
     Bwapi::BWTA.readMap
     Bwapi::BWTA.analyze
     puts "Map data ready"
+
+    @state = AI::State.new(game)
+    @strategy = ZergStrategy.new(state)
   rescue Exception => e
     puts "-------------"
     puts e.message
@@ -71,10 +72,17 @@ class ZergStrategy
 
   #makes the strategy consisting of steps
   def initialize_strategy
+    main_position = player.command_centers.first.position
+    unscouted_bases = BWTA.base_locations.to_a.map(&:position).sort do |a, b|
+      main_position.getDistance(b) <=> main_position.getDistance(a)
+    end[1..-1]
+
+    puts "Unscouted bases: #{unscouted_bases.inspect}"
+
     #Basic Strategy:
     strategy_step "Every idle worker should mine" do
       precondition do
-        true #No requirements
+        player.workers.select(&:idle?).any?
       end
 
       postcondition do
@@ -116,7 +124,7 @@ class ZergStrategy
       end
 
       progresscondition do
-        player.units.values.any? {|unit| unit.issued_orders.first && unit.issued_orders.first.name == "Spawn Overlord"}
+        player.units.values.any? {|unit| unit.has_order? "Spawn Overlord" }
       end
 
       postcondition do
@@ -136,15 +144,14 @@ class ZergStrategy
         overlords = player.get_all_by_unit_type(UnitType.Zerg_Overlord)
         if overlords.count == 1
           overlord = overlords.first
-          locations = BWTA.base_locations.to_a
-          center = player.command_centers.first
-
-          target = locations.sort do |a, b|
-            center.position.getDistance(b.position) <=> center.position.getDistance(a.position)
-          end[1].position
-
+          target = unscouted_bases.shift
+          puts "Target is: #{target.inspect}"
           true
         end
+      end
+
+      progresscondition do
+        overlord && target
       end
 
       postcondition do
@@ -152,13 +159,27 @@ class ZergStrategy
       end
 
       order do
+        puts "Going to move overlord to: #{target.inspect}"
         overlord.move(target) if overlord
       end
     end
 
-    strategy_step "Go scout" do
+    strategy_step "Drone scout" do
+      drone_scout = nil
+      target = nil
+
       precondition do
-        false #player.units.values.count(&:worker?) >= 5
+        if drone_scout.nil? && unscouted_bases.count > 1 && player.get_all_by_unit_type(UnitType.Zerg_Spawning_Pool).count > 0
+          puts "Ready to send scout"
+          drone_scout = player.workers.select {|w| w.has_order? "Mine" }.first
+          puts "Selected drone: #{drone_scout}"
+          player.workers.each do |w|
+            puts "Worker: #{w.id}:"
+            puts w.issued_orders.map(&:name).inspect
+          end
+          target = unscouted_bases.shift
+          true
+        end
       end
 
       postcondition do
@@ -166,9 +187,8 @@ class ZergStrategy
       end
 
       order do
-        #scout = player.workers.select {|w|w.issued_orders.first.name == "Mine" }.first
-        #scout.issued_orders = []
-        #scout.move_to unexplored_enemy_location
+        # TODO why is if drone_scout necessary?
+        drone_scout.move(target) if drone_scout
       end
     end
 

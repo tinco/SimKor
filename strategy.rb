@@ -42,7 +42,7 @@ module AI
 
     #A step is in progress if any of its progressconditions are met
     def in_progress?
-      progressconditions.any? &:met?
+      progressconditions.any?(&:met?)
     end
 
     def precondition(name=nil, &condition)
