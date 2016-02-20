@@ -77,17 +77,11 @@ class ZergStrategy
       main_position.getDistance(b) <=> main_position.getDistance(a)
     end[1..-1]
 
-    puts "Unscouted bases: #{unscouted_bases.inspect}"
-
     #Basic Strategy:
     strategy_step "Every idle worker should mine" do
-      precondition do
-        player.workers.select(&:idle?).any?
-      end
+      precondition { player.workers.any? &:idle? }
 
-      postcondition do
-        false #this step should be repeated
-      end
+      postcondition { false } #this step should be repeated
 
       order do
         center = player.command_centers.first
@@ -104,36 +98,22 @@ class ZergStrategy
 
     #When there is less than 5 supply and a spawning pool does not exist, a drone should be spawned
     strategy_step "Spawn a drone" do
-      precondition do
-        player.minerals >= 50 && player.supply_used < 10
-      end
+      precondition { player.minerals >= 50 && player.supply_used < 10 }
 
-      postcondition do
-        false #this step should be repeated
-      end
+      postcondition { false } #this step should be repeated
 
-      order do
-        spawn UnitType.Zerg_Drone
-      end
+      order { spawn UnitType.Zerg_Drone }
     end
 
     #When there is not enough supply an overlord should be spawned
     strategy_step "Spawn an overlord" do
-      precondition do
-        player.minerals >= 100 && player.supply_total <= player.supply_used #not smart
-      end
+      precondition { player.minerals >= 100 && player.supply_total <= player.supply_used }#not smart
 
-      progresscondition do
-        player.units.values.any? {|unit| unit.has_order? "Spawn Overlord" }
-      end
+      progresscondition { player.units.values.any? {|unit| unit.has_order? "Spawn Overlord" } }
 
-      postcondition do
-        false #this step should be repeated
-      end
+      postcondition { false }#this step should be repeated
 
-      order do
-        spawn UnitType.Zerg_Overlord
-      end
+      order { spawn UnitType.Zerg_Overlord }
     end
 
     strategy_step "Early overlord scout" do
@@ -145,23 +125,15 @@ class ZergStrategy
         if overlords.count == 1
           overlord = overlords.first
           target = unscouted_bases.shift
-          puts "Target is: #{target.inspect}"
           true
         end
       end
 
-      progresscondition do
-        overlord && target
-      end
+      progresscondition { overlord && target }
 
-      postcondition do
-        overlord.position == target if overlord
-      end
+      postcondition { overlord.position == target if overlord }
 
-      order do
-        puts "Going to move overlord to: #{target.inspect}"
-        overlord.move(target) if overlord
-      end
+      order { overlord.move(target) if overlord }
     end
 
     strategy_step "Drone scout" do
@@ -170,11 +142,8 @@ class ZergStrategy
 
       precondition do
         if drone_scout.nil? && unscouted_bases.count > 1 && player.get_all_by_unit_type(UnitType.Zerg_Spawning_Pool).count > 0
-          puts "Ready to send scout"
           drone_scout = player.workers.select {|w| w.has_order? "Mine" }.first
-          puts "Selected drone: #{drone_scout}"
           player.workers.each do |w|
-            puts "Worker: #{w.id}:"
             puts w.issued_orders.map(&:name).inspect
           end
           target = unscouted_bases.shift
@@ -194,17 +163,11 @@ class ZergStrategy
 
     #At 5 supply, 200 minerals a spawning pool should be made
     strategy_step "Make a spawning pool at 5 supply" do
-      precondition do
-        player.minerals > 200 && player.supply_total >= 10
-      end
+      precondition { player.minerals > 200 && player.supply_total >= 10 }
 
-      postcondition do
-        player.units.values.any? {|u| u.type == UnitType.Zerg_Spawning_Pool}
-      end
+      postcondition { player.units.values.any? {|u| u.type == UnitType.Zerg_Spawning_Pool} }
 
-      progresscondition do
-        player.units.values.any? {|unit| unit.issued_orders.first && unit.issued_orders.first.name == "Build SpawningPool"}
-      end
+      progresscondition { player.units.values.any? {|u| u.has_order? "Build SpawningPool" } }
 
       order do
         player.workers.first.build(UnitType.Zerg_Spawning_Pool, build_location(UnitType.Zerg_Spawning_Pool))
@@ -213,17 +176,11 @@ class ZergStrategy
 
     #When there is a spawning pool and enough minerals and supply, a zergling should be made
     strategy_step "Make zerglings" do
-      precondition do
-        player.minerals > 50 && player.supply_left >= 2
-      end
+      precondition { player.minerals > 50 && player.supply_left >= 2 }
 
-      precondition do #a spawning pool exists
-        player.units.values.any? {|u| u.type == UnitType.Zerg_Spawning_Pool }
-      end
+      precondition { player.get_all_by_unit_type(UnitType.Zerg_Spawning_Pool).count > 0 }
 
-      postcondition do
-        false #this step should be repeated
-      end
+      postcondition { false } #this step should be repeated
 
       order do
         while (player.minerals > 50 && player.supply_left >= 2 && player.larva_available?) do
@@ -234,13 +191,9 @@ class ZergStrategy
 
     #When there are 5 zerglings, they should attack
     strategy_step "Attack!" do
-      precondition do
-        player.get_all_by_unit_type(UnitType.Zerg_Zergling).count >= 5
-      end
+      precondition { player.get_all_by_unit_type(UnitType.Zerg_Zergling).count >= 5 }
 
-      postcondition do
-        false #just keep on doin' it
-      end
+      postcondition { false } #just keep on doin' it
 
       order do
         player.get_all_by_unit_type(UnitType.Zerg_Zergling).reject(&:dead?).select(&:idle?).each do |z|

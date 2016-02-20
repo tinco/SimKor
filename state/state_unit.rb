@@ -54,6 +54,10 @@ module AI
         order do
           right_click_unit(mineral_camp)
         end
+
+        postcondition do
+          false
+        end
       end
     end
 
