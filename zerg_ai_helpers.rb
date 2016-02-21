@@ -1,5 +1,5 @@
 module AI
-  module ZergAIHelpers
+  module ZergHelpers
     include Bwapi
 
     #this method provides an array of mineralspots that are 
@@ -14,6 +14,10 @@ module AI
       starcraft.units.vespene_geysers.select do |u|
         u.distance_to(player.command_centers.first) < 9.build_tiles
       end
+    end
+
+    def zerglings
+      player.get_all_by_unit_type(UnitType.Zerg_Zergling).reject(&:dead?)
     end
 
     #returns array of tile-coordinates of specified building

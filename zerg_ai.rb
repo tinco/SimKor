@@ -1,5 +1,6 @@
 require 'condition'
 require 'ai_helpers'
+require 'zerg_ai_helpers'
 require 'state'
 require 'strategy'
 require 'ostruct'
@@ -45,6 +46,7 @@ class ZergStrategy
   extend Forwardable
 
   include AI::Helpers
+  include AI::ZergHelpers
   include AI::ConditionSyntax
 
   attr_accessor :state
@@ -65,6 +67,7 @@ class ZergStrategy
   def execute
     strategy_steps.values.reject {|s|s.satisfied? || s.in_progress?}.each do |step|
       if step.requirements_met?
+        puts "Executing: #{step.name}"
         step.execute
       end
     end
@@ -73,9 +76,10 @@ class ZergStrategy
   #makes the strategy consisting of steps
   def initialize_strategy
     main_position = player.command_centers.first.position
-    unscouted_bases = BWTA.base_locations.to_a.map(&:position).sort do |a, b|
+    _, *unscouted_bases = BWTA.start_locations.to_a.map(&:position).sort do |a, b|
       main_position.getDistance(b) <=> main_position.getDistance(a)
-    end[1..-1]
+    end.reverse
+    overlord_target = nil
 
     #Basic Strategy:
     strategy_step "Every idle worker should mine" do
@@ -107,7 +111,7 @@ class ZergStrategy
 
     #When there is not enough supply an overlord should be spawned
     strategy_step "Spawn an overlord" do
-      precondition { player.minerals >= 100 && player.supply_total <= player.supply_used }#not smart
+      precondition { player.minerals >= 100 && player.supply_total <= player.supply_used && player.larva_available? } #not smart
 
       progresscondition { player.units.values.any? {|unit| unit.has_order? "Spawn Overlord" } }
 
@@ -125,6 +129,7 @@ class ZergStrategy
         if overlords.count == 1
           overlord = overlords.first
           target = unscouted_bases.shift
+          overlord_target = target
           true
         end
       end
@@ -141,18 +146,10 @@ class ZergStrategy
       target = nil
 
       precondition do
-        if drone_scout.nil? && unscouted_bases.count > 1 && player.get_all_by_unit_type(UnitType.Zerg_Spawning_Pool).count > 0
-          drone_scout = player.workers.select {|w| w.has_order? "Mine" }.first
-          player.workers.each do |w|
-            puts w.issued_orders.map(&:name).inspect
-          end
-          target = unscouted_bases.shift
+        if player.get_all_by_unit_type(UnitType.Zerg_Spawning_Pool).count > 0 && target = unscouted_bases.shift
+          drone_scout = player.workers.first
           true
         end
-      end
-
-      postcondition do
-        #arrived_at_unexplored_enemy_location
       end
 
       order do
@@ -176,7 +173,7 @@ class ZergStrategy
 
     #When there is a spawning pool and enough minerals and supply, a zergling should be made
     strategy_step "Make zerglings" do
-      precondition { player.minerals > 50 && player.supply_left >= 2 }
+      precondition { player.minerals > 50 && player.supply_left >= 2 && player.larva_available? }
 
       precondition { player.get_all_by_unit_type(UnitType.Zerg_Spawning_Pool).count > 0 }
 
@@ -189,16 +186,30 @@ class ZergStrategy
       end
     end
 
+    strategy_step "Move in!" do
+      precondition { zerglings.count >= 1 && enemy.units.count == 0 }
+
+      postcondition { false }
+
+      order do
+        target = unscouted_bases.shift || overlord_target
+
+        zerglings.each do |z|
+          puts "Ordering zerglings to move"
+          z.move(target)
+        end
+      end
+    end
+
     #When there are 5 zerglings, they should attack
     strategy_step "Attack!" do
-      precondition { player.get_all_by_unit_type(UnitType.Zerg_Zergling).count >= 5 }
+      precondition { zerglings.count >= 5 && enemy.units.count > 0 }
 
       postcondition { false } #just keep on doin' it
 
-      order do
-        player.get_all_by_unit_type(UnitType.Zerg_Zergling).reject(&:dead?).select(&:idle?).each do |z|
-          attack_nearest_enemy(z)
-        end
+      order do 
+        puts "Ordering zerglings to attack"
+        zerglings.each { |z| attack_nearest_enemy(z) }
       end
     end
   end
